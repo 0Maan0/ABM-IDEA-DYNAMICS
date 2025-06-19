@@ -1,5 +1,5 @@
 """
-This module contains the funcitons we call in the main.py
+This module contains the functions we call in the main.py
 """
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
