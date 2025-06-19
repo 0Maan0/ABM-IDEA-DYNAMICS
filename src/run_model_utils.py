@@ -143,8 +143,7 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
         result['true_probs_new'] = true_probs[1]
         all_results.append(result)
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_filename = f"simulation_results_{timestamp}.csv"
+    csv_filename = f"{num_agents}agents_{network_type}_{num_simulations}sims.csv"
     save_results_as_csv(all_results, csv_filename)
 
 def plot_belief_evolution(model_history):

@@ -6,7 +6,7 @@ if __name__ == "__main__":
     num_agents = 10  # Number of scientists in the network
     network_type = "cycle"  # Options: 'cycle', 'wheel', 'complete'
     true_probs = (0.2, 0.8)  # Probabilities of the two theories being true (old, new)
-    num_simulations = 100
+    num_simulations = 2000
     show_final_state = False  # Set to True if you want to see the final state of the simulation
     
     # Parameters for the animation 
