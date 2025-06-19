@@ -1,5 +1,5 @@
 from src.network import ScienceNetworkModel
-#from src.scientists import ScientistAgent
+from src.scientists import ScientistAgent
 
 if __name__ == "__main__":
     #   Model parameters

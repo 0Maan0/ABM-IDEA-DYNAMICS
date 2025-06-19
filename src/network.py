@@ -41,6 +41,7 @@ class ScienceNetworkModel(Model):
             self.schedule.add(agent)
 
     def _create_network(self, network_type):
+        """Create a network based on the specified type."""
         if network_type == "cycle":
             return nx.cycle_graph(self.num_agents)
         elif network_type == "wheel":
@@ -51,9 +52,11 @@ class ScienceNetworkModel(Model):
             raise ValueError("Unknown network type")
 
     def step(self):
+        """Advance the model by one step, updating all agents simultaneously."""
         self.schedule.step()
 
     def animate(self, num_frames=200, interval=500, steps_per_frame=1):
+        """Create an animation of the model's state over time."""
         fig, ax = plt.subplots(figsize=(6, 6))
         G = self.network
         pos = nx.spring_layout(G, seed=69)  
@@ -67,6 +70,7 @@ class ScienceNetworkModel(Model):
         ]
         
         def update(frame):
+            """Update the plot for each frame of the animation."""
             for _ in range(steps_per_frame):
                 self.step()
             ax.clear()
