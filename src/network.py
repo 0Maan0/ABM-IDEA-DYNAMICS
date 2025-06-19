@@ -14,32 +14,30 @@ import numpy as np
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
-# titlesize = 16
-# labelsize = 20
 colors = sns.color_palette("Set2", 8)
-# ticksize = 18
 
 class ScienceNetworkModel(Model):
     """
     The main model for simulating the spread of a new scientific theory in a network.  
     For now you can choose between a cycle, wheel and complete network.
     """
-    def __init__(self, num_agents=10, network_type="cycle", true_probs=(0.9, 0.1)):
+    def __init__(self, num_agents=10, network_type="cycle", true_probs=(0.2, 0.8)):
         self.num_agents = num_agents
         self.true_probs = true_probs  
         self.schedule = SimultaneousActivation(self)
         self.network = self._create_network(network_type)
 
+        #TODO: write multiple functions for different ways to start the simulation
         # Initiate agents such that only the first agent is very dedicated to a new theory and the rest isnt yet
         original_agent = np.random.randint(0, num_agents)
         for i in range(num_agents):
             if i == original_agent:
-                prior_new = 0.9 # so this agent believes that theory A is very likely to be true 
-                prior_old = 0.1
+                prior_old = 0.2
+                prior_new = 0.8 # so this agent believes that the new theory is very likely to be true 
             else:
-                prior_new = 0.4 # the other agents believe in the old theory mostly but also 0.4 open to the new one
-                prior_old = 0.6
-            agent = ScientistAgent(i, self, prior_new, prior_old)
+                prior_old = 0.7
+                prior_new = 0.3 # the other agents believe in the old theory mostly but also 0.4 open to the new one
+            agent = ScientistAgent(i, self, prior_old, prior_new)
             self.schedule.add(agent)
 
     def _create_network(self, network_type):
@@ -64,8 +62,8 @@ class ScienceNetworkModel(Model):
         
         # Define legend patches
         legend_elements = [
-            Patch(facecolor=colors[1], edgecolor='k', label='Believes New Theory'),
-            Patch(facecolor=colors[0], edgecolor='k', label='Believes Old Theory')
+            Patch(facecolor=colors[1], edgecolor='k', label='Believes Old Theory'),
+            Patch(facecolor=colors[0], edgecolor='k', label='Believes New Theory')
         ]
         
         def update(frame):
