@@ -19,8 +19,8 @@ class ScientistAgent(Agent):
 
     def step(self):
         chosen = self.current_choice
-        true_prob = self.model.true_probs[chosen]
-        result = 1 if random.random() < true_prob else 0
+        true_prob = self.model.true_probs[chosen] #"true" probability of the chosen theory
+        result = 1 if random.random() < true_prob else 0 #simulate evidence gathering
 
         # Bayesian 
         if chosen == 0:
