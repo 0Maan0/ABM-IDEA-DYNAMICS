@@ -21,7 +21,7 @@ python main.py
 
 You can choose from three different networks: **"cycle"**, **"wheel"**, **"complete"**
 
-## Setting Up Your Simulation
+## Set up 
 
 In main.py, you can adjust the following important parameters:
 
