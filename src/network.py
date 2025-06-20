@@ -7,12 +7,12 @@ import numpy as np
 
 class ScienceNetworkModel(Model):
     """
-    The main model for simulating the spread of a new scientific theory in a network.  
+    The main model for simulating the spread of a new scientific theory in a network.
     For now you can choose between a cycle, wheel and complete network.
     """
     def __init__(self, num_agents=10, network_type="cycle", true_probs=(0.2, 0.8)):
         self.num_agents = num_agents
-        self.true_probs = true_probs  
+        self.true_probs = true_probs
         self.schedule = SimultaneousActivation(self)
         self.network = self._create_network(network_type)
         self.step_count = 0
@@ -24,10 +24,13 @@ class ScienceNetworkModel(Model):
         for i in range(num_agents):
             if i == original_agent:
                 prior_old = 0.2
-                prior_new = 0.8 # so this agent believes that the new theory is very likely to be true 
+                prior_new = 0.8 # so this agent believes that the new theory is very likely to be true
             else:
-                prior_old = 0.7
-                prior_new = 0.3 # the other agents believe in the old theory mostly but also 0.4 open to the new one
+                # scale the random prior distribution from [0, 1] to [0.2, 0.8]
+                random_number = random.random()
+                random_number_scaled = random_number * 0.6
+                prior_old = 0.2 + random_number_scaled
+                prior_new = 1 - prior_old  # total needs to remain 1
             agent = ScientistAgent(i, self, prior_old, prior_new)
             self.schedule.add(agent)
 
@@ -44,12 +47,12 @@ class ScienceNetworkModel(Model):
     def step(self):
         self.step_count += 1
         self.schedule.step()
-        
+
         # Check if the simulation has converged after each step
         if not self.converged and self.convergence_status():
             self.converged = True
             self.convergence_step = self.step_count
-    
+
     def convergence_status(self):
         beliefs = [agent.current_choice for agent in self.schedule.agents]
         return len(set(beliefs)) == 1 # Returns True if all agents have the same belief
