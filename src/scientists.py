@@ -7,7 +7,8 @@ class ScientistAgent(Agent):
     """
     An agent class representing a scientist in a network epistemology model.
     """
-    def __init__(self, unique_id, model, prior_old, prior_new):
+    def __init__(self, unique_id, model, prior_old, prior_new, skeptic,
+                 number_of_institutes=2):
         super().__init__(unique_id, model)
 
         # Beliefs about the two scientific theories old or new
@@ -17,16 +18,15 @@ class ScientistAgent(Agent):
         # The current theory the scientists believe
         self.current_choice = 0 if prior_old > prior_new else 1
 
+        # Addition parameters for our addition
+        self.H_index = random.random()  # [0, 1]
+        # scaled to [0, number of institutes - 1]
+        self.institute = random.randint(0, number_of_institutes - 1)
+        self.skeptic = skeptic  # unlikeliness to accept new idea
+
     def step(self):
         chosen = self.current_choice
         true_prob = self.model.true_probs[chosen]
-        result = 1 if random.random() < true_prob else 0
-
-        # Bayesian 
-        if chosen == 0:
-            self.belief_old = (self.belief_old + result) / 2
-        else:
-            self.belief_new = (self.belief_new + result) / 2
 
         # Talk to neighbours
         neighbors = self.model.network.neighbors(self.unique_id)
