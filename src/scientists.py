@@ -33,6 +33,8 @@ class ScientistAgent(Agent):
         for n_id in neighbors:
             neighbor = self.model.schedule.agents[n_id]
             # Simple averaging of beliefs ==> TODO: Make more complicated?
+            # TODO: for some neighbours the power of their believe is more influencial
+            #TODO: If scientists from the same "group" they are more likely to influence eachother
             self.belief_old = (self.belief_old + neighbor.belief_old) / 2
             self.belief_new = (self.belief_new + neighbor.belief_new) / 2
 

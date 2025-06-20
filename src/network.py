@@ -3,18 +3,7 @@ from mesa.time import SimultaneousActivation
 import networkx as nx
 import random
 from src.scientists import ScientistAgent
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.patches import Patch
-
-import seaborn as sns
 import numpy as np
-
-# Plotting parameters
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
-
-colors = sns.color_palette("Set2", 8)
 
 class ScienceNetworkModel(Model):
     """
@@ -26,15 +15,18 @@ class ScienceNetworkModel(Model):
         self.true_probs = true_probs  
         self.schedule = SimultaneousActivation(self)
         self.network = self._create_network(network_type)
+        self.step_count = 0
+        self.converged = False
 
-        #TODO: write multiple functions for different ways to start the simulation
+        #TODO Maan: write multiple functions for different ways to start the simulation
+        
         # Initiate agents such that only the first agent is very dedicated to a new theory and the rest isnt yet
         original_agent = np.random.randint(0, num_agents)
         for i in range(num_agents):
-            if i == original_agent:
+            if i == original_agent: #TODO: add original agent priors 
                 prior_old = 0.2
                 prior_new = 0.8 # so this agent believes that the new theory is very likely to be true 
-            else:
+            else: #TODO: add distribution of priors
                 prior_old = 0.7
                 prior_new = 0.3 # the other agents believe in the old theory mostly but also 0.4 open to the new one
             agent = ScientistAgent(i, self, prior_old, prior_new)
@@ -52,30 +44,30 @@ class ScienceNetworkModel(Model):
             raise ValueError("Unknown network type")
 
     def step(self):
-        """Advance the model by one step, updating all agents simultaneously."""
+        self.step_count += 1
         self.schedule.step()
+        
+        # Check if the simulation has converged after each step
+        if not self.converged and self.convergence_status():
+            self.converged = True
+            self.convergence_step = self.step_count
+    
+    def convergence_status(self):
+        beliefs = [agent.current_choice for agent in self.schedule.agents]
+        return len(set(beliefs)) == 1 # Returns True if all agents have the same belief
 
-    def animate(self, num_frames=200, interval=500, steps_per_frame=1):
-        """Create an animation of the model's state over time."""
-        fig, ax = plt.subplots(figsize=(6, 6))
-        G = self.network
-        pos = nx.spring_layout(G, seed=69)  
-        def get_colors():
-            return [colors[1] if agent.current_choice == 0 else colors[0] for agent in self.schedule.agents]
-        
-        # Define legend patches
-        legend_elements = [
-            Patch(facecolor=colors[1], edgecolor='k', label='Believes Old Theory'),
-            Patch(facecolor=colors[0], edgecolor='k', label='Believes New Theory')
-        ]
-        
-        def update(frame):
-            """Update the plot for each frame of the animation."""
-            for _ in range(steps_per_frame):
-                self.step()
-            ax.clear()
-            nx.draw(G, pos, with_labels=True, node_color=get_colors(), node_size=500, ax=ax)
-            ax.set_title(f"Step {frame * steps_per_frame + 1}")
-            ax.legend(handles=legend_elements, loc='upper right')
-        anim = animation.FuncAnimation(fig, update, frames=num_frames, interval=interval, repeat=False)
-        plt.show()
+    def get_convergence_info(self):
+        if self.converged:
+            beliefs = [agent.current_choice for agent in self.schedule.agents]
+            theory = "New Theory" if beliefs[0] == 1 else "Old Theory"
+            return {
+                'converged': True,
+                'step': self.convergence_step,
+                'theory': theory
+            }
+        else:
+            return {
+                'converged': False,
+                'step': self.step_count,
+                'theory': None
+            }
