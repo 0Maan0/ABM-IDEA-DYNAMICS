@@ -6,6 +6,9 @@ if __name__ == "__main__":
     num_agents = 10  # Number of scientists in the network
     network_type = "cycle"  # Options: 'cycle', 'wheel', 'complete'
     true_probs = (0.2, 0.8)  # Probabilities of the two theories being true (old, new)
+    believe_strength_range = (0.5, 2.0)  # Range for belief strength of agents
+    prior_strength_range = (1, 4)  # Range for prior strength of agents
+    # Number of simulations to run
     num_simulations = 2000
     show_final_state = False  # Set to True if you want to see the final state of the simulation
     

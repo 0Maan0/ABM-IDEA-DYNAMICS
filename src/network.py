@@ -10,26 +10,50 @@ class ScienceNetworkModel(Model):
     The main model for simulating the spread of a new scientific theory in a network.  
     For now you can choose between a cycle, wheel and complete network.
     """
-    def __init__(self, num_agents=10, network_type="cycle", true_probs=(0.2, 0.8)):
+    def __init__(self, num_agents=10, network_type="cycle", true_probs=(0.2, 0.8),
+                 prior_strength_range=(1, 4), belief_strength_range=(0.5, 2.0)):
         self.num_agents = num_agents
-        self.true_probs = true_probs  
+        self.true_probs = true_probs
         self.schedule = SimultaneousActivation(self)
         self.network = self._create_network(network_type)
         self.step_count = 0
         self.converged = False
-
+        
         #TODO Maan: write multiple functions for different ways to start the simulation
         
         # Initiate agents such that only the first agent is very dedicated to a new theory and the rest isnt yet
         original_agent = np.random.randint(0, num_agents)
         for i in range(num_agents):
-            if i == original_agent: #TODO: add original agent priors 
-                prior_old = 0.2
-                prior_new = 0.8 # so this agent believes that the new theory is very likely to be true 
-            else: #TODO: add distribution of priors
-                prior_old = 0.7
-                prior_new = 0.3 # the other agents believe in the old theory mostly but also 0.4 open to the new one
-            agent = ScientistAgent(i, self, prior_old, prior_new)
+            # Initialize beta distribution parameters
+            if i == original_agent:
+                # Strong prior favoring new theory
+                prior_old_alpha = random.uniform(1, 2)
+                prior_old_beta = random.uniform(2, 4)
+                prior_new_alpha = random.uniform(2, 4)
+                prior_new_beta = random.uniform(1, 2)
+            else:
+                # Default to slightly favoring old theory
+                prior_old_alpha = random.uniform(2, 4)
+                prior_old_beta = random.uniform(1, 2)
+                prior_new_alpha = random.uniform(1, 2)
+                prior_new_beta = random.uniform(2, 4)
+            
+            # Scale priors by prior strength to control initial belief extremity
+            prior_strength = random.uniform(*prior_strength_range)
+            prior_old_alpha *= prior_strength
+            prior_old_beta *= prior_strength
+            prior_new_alpha *= prior_strength
+            prior_new_beta *= prior_strength
+            
+            # Assign random belief strength to control resistance to change
+            belief_strength = random.uniform(*belief_strength_range)
+            
+            agent = ScientistAgent(i, self, 
+                                 prior_old_alpha=prior_old_alpha,
+                                 prior_old_beta=prior_old_beta,
+                                 prior_new_alpha=prior_new_alpha,
+                                 prior_new_beta=prior_new_beta,
+                                 belief_strength=belief_strength)
             self.schedule.add(agent)
 
     def _create_network(self, network_type):
