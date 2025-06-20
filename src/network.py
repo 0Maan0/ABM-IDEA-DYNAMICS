@@ -20,18 +20,22 @@ class ScienceNetworkModel(Model):
 
         #TODO: write multiple functions for different ways to start the simulation
         # Initiate agents such that only the first agent is very dedicated to a new theory and the rest isnt yet
-        original_agent = np.random.randint(0, num_agents)
+        original_agent = np.random.randint(0, num_agents - 1)
         for i in range(num_agents):
             if i == original_agent:
                 prior_old = 0.2
                 prior_new = 0.8 # so this agent believes that the new theory is very likely to be true
             else:
-                # scale the random prior distribution from [0, 1] to [0.2, 0.8]
-                random_number = random.random()
-                random_number_scaled = random_number * 0.6
-                prior_old = 0.2 + random_number_scaled
-                prior_new = 1 - prior_old  # total needs to remain 1
-            agent = ScientistAgent(i, self, prior_old, prior_new)
+                # use standard range of 0.4 and the skeptic score scales it from 0-0.4 to 0.6-1
+                skeptic_value = random.random()
+                base = 0.5
+                random_range = random.uniform(0, 0.2)
+                skeptic_range = 0.3 * skeptic_value
+                prior_old = base + skeptic_range + random_range
+                assert prior_old <= 1  # check to ensure correctness
+                prior_new = 1 - prior_old  # simply the complement of the other one
+
+            agent = ScientistAgent(i, self, prior_old, prior_new, skeptic_value)
             self.schedule.add(agent)
 
     def _create_network(self, network_type):
