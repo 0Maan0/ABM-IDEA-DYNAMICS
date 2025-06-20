@@ -4,20 +4,22 @@ from src.run_model_utils import *
 if __name__ == "__main__":
     # Model parameters
     num_agents = 10  # Number of scientists in the network
-    network_type = "complete"  # Options: 'cycle', 'wheel', 'complete'
-    true_probs = (0.2, 0.8)  # Probabilities of the two theories being true (old, new)
-    believe_strength_range = (0.5, 2.0)  # Range for belief strength of agents
-    prior_strength_range = (1, 4)  # Range for prior strength of agents
+    network_type = "cycle"  # Options: 'cycle', 'wheel', 'complete'
+    
+    # Theory payoff parameters
+    old_theory_payoff = 0.5  # Payoff for working with the old theory
+    new_theory_payoffs = (0.4, 0.6)  # Payoffs for working with the new theory when either (old theory true, new theory true)
+    true_theory = "new"  # Which theory is actually true (old or new)
+    belief_strength_range = (0.5, 2.0)  # Belief strength range scientists have which will affect their resistance to change their beliefs
+    
     # Number of simulations to run
     num_simulations = 2000
-    show_final_state = False  # Set to True if you want to see the final state of the simulation
+    show_final_state = False  # True if you want to see the final state of the simulation (to check convergence)
     
     # Parameters for the animation 
     # Runs until convergence but here you can say if you want to use animation or not
     use_animation = False
-    max_steps = 1000  
-    
-    # Animation parameters 
+    max_steps = 1000   
     animation_params = {
         'num_frames': 30,
         'interval': 500,
@@ -29,7 +31,10 @@ if __name__ == "__main__":
         num_simulations=num_simulations,
         num_agents=num_agents,
         network_type=network_type,
-        true_probs=true_probs,
+        old_theory_payoff=old_theory_payoff,
+        new_theory_payoffs=new_theory_payoffs,
+        true_theory=true_theory,
+        belief_strength_range=belief_strength_range,
         use_animation=use_animation,
         max_steps=max_steps,
         animation_params=animation_params,
