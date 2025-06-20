@@ -79,12 +79,13 @@ def show_final_state(model):
     # we dont need to model all iterations but you can check convergence
     animate_model(model, num_frames=1, interval=1000, steps_per_frame=1)
 
-def create_and_run_model(num_agents=10, network_type="cycle", true_probs=(0.2, 0.8), 
-                        use_animation=True, max_steps=1000, animation_params=None, show_final_state=False):
+def create_and_run_model(num_agents=10, network_type="cycle", true_probs=(0.2, 0.8),  prior_strength_range=(1, 4),
+                          believe_strength_range=(0.5, 2.0), use_animation=True, max_steps=1000, animation_params=None, show_final_state=False):
     """ 
     A main functin that creates the model, runs it and saves it
     """
-    model = ScienceNetworkModel(num_agents=num_agents, network_type=network_type, true_probs=true_probs)
+    model = ScienceNetworkModel(num_agents=num_agents, network_type=network_type, true_probs=true_probs,
+                                prior_strength_range=prior_strength_range, belief_strength_range=believe_strength_range)
     
     if use_animation:
         default_params = {
@@ -113,7 +114,8 @@ def save_results_as_csv(results, filename="test_results.csv"):
     df.to_csv(filepath, index=False)
     print(f"Results saved to {filepath}")
 
-def run_simulations_until_convergence(num_simulations=100, num_agents=10, network_type="cycle", true_probs=(0.2, 0.8), 
+def run_simulations_until_convergence(num_simulations=100, num_agents=10, network_type="cycle", true_probs=(0.2, 0.8),
+                                      prior_strength_range=(1, 4), believe_strength_range=(0.5, 2.0), 
                                       use_animation=False, max_steps=1000, animation_params=None, show_final_state=False):
     """
     The most important function of this module that you can call on in the main.py to run multiple simulations
@@ -131,6 +133,8 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
             num_agents=num_agents,
             network_type=network_type,
             true_probs=true_probs,
+            prior_strength_range=prior_strength_range,
+            believe_strength_range=believe_strength_range,
             use_animation=use_animation,
             max_steps=max_steps,
             animation_params=animation_params,
@@ -141,9 +145,11 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
         result['num_agents'] = num_agents
         result['true_probs_old'] = true_probs[0]
         result['true_probs_new'] = true_probs[1]
+        result['prior_strength_range'] = prior_strength_range
+        result['believe_strength_range'] = believe_strength_range
         all_results.append(result)
     
-    csv_filename = f"{num_agents}agents_{network_type}_{num_simulations}sims.csv"
+    csv_filename = f"{network_type}/{num_agents}agents_{num_simulations}sims_{prior_strength_range}{believe_strength_range}.csv"
     save_results_as_csv(all_results, csv_filename)
 
 def plot_belief_evolution(model_history):
