@@ -26,6 +26,7 @@ class ScienceNetworkModel(Model):
                 prior_old = 0.2
                 prior_new = 0.8 # so this agent believes that the new theory is very likely to be true
             else:
+                # TODO: change still?? idk I'm tired
                 # use standard range of 0.4 and the skeptic score scales it from 0-0.4 to 0.6-1
                 skeptic_value = random.random()
                 base = 0.5
