@@ -75,34 +75,35 @@ class ScienceNetworkModel(Model):
             self.convergence_step = self.step_count
     
     def convergence_status(self):
-        """According to paper, converges if all scientists have very strong beliefs >0.9999 
-            or all believe old theory"""
+        """
+        According to Zollman's paper, a population has finished learning if one of two conditions are met:
+        1. Every agent takes action A1 (old theory) - no new information can arrive to change their minds
+        2. Every agent believes in φ2 (new theory) with probability > 0.9999
+        """
         actions = [agent.current_choice for agent in self.schedule.agents]
         beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
         
-        # If everyone believes old theory, nothing more will happen
-        if all(b < 0.5 for b in beliefs):
+        # Condition 1: Everyone using old theory (A1)
+        if all(action == "old" for action in actions):
             return True
-            
-        # convergence
-        if all(b > 0.9 or b < 0.1 for b in beliefs):
+        
+        # Condition 2: Everyone strongly believes in new theory (φ2)
+        if all(b > 0.9999 for b in beliefs):
             return True
             
         return False
 
     def get_convergence_info(self):
         if self.converged:
+            actions = [agent.current_choice for agent in self.schedule.agents]
             beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
             
-            # Check if converged to all believing old theory
-            if all(b < 0.5 for b in beliefs):
+            # Check convergence type
+            if all(action == "old" for action in actions):
                 theory = "Old Theory"
-            # Otherwise check if beliefs converged to correct theory
-            elif all(b > 0.5 for b in beliefs) == (self.true_theory == "new"):
-                theory = "Correct Theory"
-            else:
-                theory = "Incorrect Theory"
-                
+            elif all(b > 0.9999 for b in beliefs):
+                theory = "Correct Theory" if self.true_theory == "new" else "Incorrect Theory"
+            
             return {
                 'converged': True,
                 'step': self.convergence_step,

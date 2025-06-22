@@ -1,5 +1,5 @@
 """
-This module reproduces the key figures from Zollman's 2011 paper:
+This module reproduces Figures 2 and 3 from Zollman's paper:
 'The Communication Structure of Epistemic Communities'
 """
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ plt.rcParams['ps.fonttype'] = 42
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
-def run_zollman_experiment(network_sizes=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12], num_simulations=10000):
+def run_zollman_experiment(network_sizes=[2, 4, 6, 8, 10, 12], num_simulations=10000):
     """
     Runs the experiment from Zollman's paper with the same parameters.
     Returns results for plotting Figures 2 and 3.
@@ -43,8 +43,10 @@ def run_zollman_experiment(network_sizes=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12], num_
             
             # Calculate metrics
             df = pd.DataFrame(sim_results)
-            success_rate = (df['theory'] == 'Correct Theory').mean()
-            avg_time = df[df['theory'] == 'Correct Theory']['step'].mean()
+            # Count only runs that reached correct beliefs
+            correct_runs = df[df['theory'] == 'Correct Theory']
+            success_rate = len(correct_runs) / num_simulations
+            avg_time = correct_runs['step'].mean() if not correct_runs.empty else 0
             
             results[size][network_type] = {
                 'success_rate': success_rate,
@@ -53,6 +55,10 @@ def run_zollman_experiment(network_sizes=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12], num_
             
             print(f"Success rate: {success_rate:.2%}")
             print(f"Average time to success: {avg_time:.1f} steps")
+            
+            # Verify all runs converged
+            if len(df) != num_simulations:
+                print(f"Warning: {num_simulations - len(df)} runs did not converge!")
     
     return results
 
@@ -65,7 +71,7 @@ def plot_zollman_figures(results, save_dir="analysis_plots"):
     markers = ['+', 'x', '*']
     colors = ['red', 'green', 'blue']
     
-    # Figure 2 in paper: Learning Results
+    # Figure 2: Learning Results
     plt.figure(figsize=(8, 6))
     for i, network_type in enumerate(network_types):
         success_rates = [results[size][network_type]['success_rate'] for size in sizes]
@@ -88,7 +94,7 @@ def plot_zollman_figures(results, save_dir="analysis_plots"):
     plt.savefig(f"{save_dir}/learning_results_{timestamp}.pdf", 
                 format='pdf', bbox_inches='tight')
     
-    # Figure 3 in paper: Speed Results
+    # Figure 3: Speed Results
     plt.figure(figsize=(8, 6))
     for i, network_type in enumerate(network_types):
         times = [results[size][network_type]['avg_time'] for size in sizes]
@@ -116,8 +122,8 @@ if __name__ == "__main__":
     # Run experiment
     print("=== Running Zollman's (2011) experiment ===")
     results = run_zollman_experiment(
-        network_sizes=range(3, 13),  # 3 to 12 agents
-        num_simulations=10000  # Large number for statistical significance
+        network_sizes=[2, 4, 6, 8, 10, 12],  
+        num_simulations=1000  
     )
     
     # Create plots
