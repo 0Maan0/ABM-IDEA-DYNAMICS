@@ -14,7 +14,9 @@ from datetime import datetime
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 
-# Plotting parameters
+plt.style.use('seaborn-v0_8-paper')
+plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams['ps.fonttype'] = 42
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
@@ -58,7 +60,14 @@ def animate_model(model, num_frames=200, interval=500, steps_per_frame=1, max_st
         actual_frames = num_frames
         
     anim = animation.FuncAnimation(fig, update, frames=actual_frames, interval=interval, repeat=False)
-    plt.show()
+    
+    # Only save animation as PDF if requested
+    if hasattr(model, 'save_plots') and model.save_plots:
+        os.makedirs("analysis_plots/animations", exist_ok=True)
+        anim.save(f"analysis_plots/animations/model_evolution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf", 
+                 writer='pdf', dpi=300)
+    else:
+        plt.show()
 
 def run_simulation_until_convergence(model, max_steps=1000):
     """
@@ -146,10 +155,9 @@ def _run_single_simulation(args):
     while not model.converged and model.step_count < params['max_steps']:
         model.step()
     
-    # Get convergence info
     conv_info = model.get_convergence_info()
     
-    # Add simulation metadata
+    # Add simulation data
     result = {
         'simulation_id': sim_id + 1,
         'network_type': params['network_type'],
@@ -214,12 +222,10 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
             "max_steps": max_steps
         }
         
-        # Create arguments for parallel processing
+        # Parallelisation
         args_list = [(i, params) for i in range(num_simulations)]
-        
-        # Calculate optimal number of processes and chunk size
         num_processes = min(cpu_count(), num_simulations)
-        chunk_size = max(1, num_simulations // (num_processes * 4))  # Adjust chunk size based on number of simulations
+        chunk_size = max(1, num_simulations // (num_processes * 4)) 
         
         print(f"\nRunning {num_simulations} simulations using {num_processes} CPU cores (chunk size: {chunk_size})...")
         
@@ -231,22 +237,9 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
                 desc="Running simulations"
             ))
     
-    # Save results
     os.makedirs(f"simulation_results/{network_type}", exist_ok=True)
     csv_filename = f"{network_type}/{num_agents}agents_{num_simulations}sims_{belief_strength_range}.csv"
     save_results_as_csv(all_results, csv_filename)
     
     return all_results
-
-def plot_belief_evolution(model_history):
-    # Maybe here we can make some function to plot how the beliefs of the agents evolved over time
-    # maybe they go up and down or more linear?
-    pass
-
-def plot_network_statistics(model):
-    #here we can call some function statistics
-    # id say write a seperate class for them but call on them in a nice manner here
-    # this way we can keep the main clean
-    pass
-
 

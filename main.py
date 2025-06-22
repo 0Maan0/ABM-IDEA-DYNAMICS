@@ -1,6 +1,12 @@
 from datetime import datetime
 from src.run_model_utils import *
 from src.run_sensitivity_tools import run_full_sensitivity_analysis
+from src.plot_sensitivity_results import (
+    plot_single_analysis,
+    plot_network_comparison,
+    plot_all_metrics,
+    plot_all_comparisons
+)
 
 if __name__ == "__main__":
     # Model parameters
@@ -27,9 +33,10 @@ if __name__ == "__main__":
         'steps_per_frame': 1
     }
     
-    # Choose what analysis to run
-    run_regular_simulations = True  
-    run_sensitivity = True
+    # Choose what code to run
+    run_regular_simulations = False #True  
+    run_sensitivity = False #True
+    create_plots = True  # New flag for plotting
     
     if run_regular_simulations:
         print("\n=== Running Regular Simulations ===")
@@ -56,3 +63,14 @@ if __name__ == "__main__":
             run_single=True,      # Run analysis for each network type
             run_comparison=True   # Run comparison across network types
         )
+        
+    if create_plots:
+        print("\n=== Creating Sensitivity Analysis Plots ===")
+        # Create plots for each network type
+        for net_type in ['cycle', 'wheel', 'complete']:
+            plot_all_metrics(network_type=net_type)
+            
+        # Create comparison plots across network types
+        plot_all_comparisons()
+        
+        print("All plots have been saved to the analysis_plots directory!")

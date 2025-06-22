@@ -29,6 +29,10 @@ def plot_sensitivity_results(results_df, network_type, metric, save=True):
     """
     Create sensitivity analysis plots from results DataFrame
     """
+    plt.style.use('seaborn-v0_8-paper')
+    plt.rcParams['pdf.fonttype'] = 42  
+    plt.rcParams['ps.fonttype'] = 42
+    
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     
     # Sort parameters by importance (mu_star)
@@ -54,11 +58,12 @@ def plot_sensitivity_results(results_df, network_type, metric, save=True):
     plt.tight_layout()
     
     if save:
-        # Save plot
+        # Save plot as PDF
         save_dir = f"analysis_plots/{network_type}"
         os.makedirs(save_dir, exist_ok=True)
-        plt.savefig(f"{save_dir}/{metric}_sensitivity.png", dpi=300, bbox_inches='tight')
-        print(f"Plot saved to {save_dir}/{metric}_sensitivity.png")
+        pdf_path = f"{save_dir}/{metric}_sensitivity.pdf"
+        plt.savefig(pdf_path, format='pdf', bbox_inches='tight')
+        print(f"Plot saved to {pdf_path}")
     
     return fig
 
@@ -67,6 +72,11 @@ def plot_network_comparison(network_types=['cycle', 'wheel', 'complete'],
     """
     Create comparison plot of sensitivity results across different network types
     """
+    # Set figure style for publication quality
+    plt.style.use('seaborn-v0_8-paper')
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+    
     # Load results for each network type
     all_results = []
     for network in network_types:
@@ -93,11 +103,12 @@ def plot_network_comparison(network_types=['cycle', 'wheel', 'complete'],
     plt.suptitle(f'Network Comparison - {metric}')
     plt.tight_layout()
     
-    # Save plot
+    # Save plot as PDF
     save_dir = "analysis_plots/comparison"
     os.makedirs(save_dir, exist_ok=True)
-    plt.savefig(f"{save_dir}/{metric}_network_comparison.png", dpi=300, bbox_inches='tight')
-    print(f"Comparison plot saved to {save_dir}/{metric}_network_comparison.png")
+    pdf_path = f"{save_dir}/{metric}_network_comparison.pdf"
+    plt.savefig(pdf_path, format='pdf', bbox_inches='tight')
+    print(f"Comparison plot saved to {pdf_path}")
     
     return fig
 
@@ -105,6 +116,11 @@ def plot_all_metrics(network_type, timestamp=None):
     """
     Create plots for all available metrics for a given network type
     """
+    # Set figure style for publication quality
+    plt.style.use('seaborn-v0_8-paper')
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+    
     results_dir = f"analysis_results/{network_type}"
     metrics = set(f.split('_')[0] for f in os.listdir(results_dir))
     

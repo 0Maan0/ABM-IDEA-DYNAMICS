@@ -42,12 +42,9 @@ class SensitivityAnalyzer:
         """Helper function for parallel processing"""
         try:
             params, network_type, num_steps, num_replicates = args
-            
-            # Store results from multiple replicates
             results = []
             
             for rep in range(num_replicates):
-                # Create and run model
                 model = ScienceNetworkModel(
                     num_agents=int(params[0]),
                     network_type=network_type,
@@ -91,22 +88,16 @@ class SensitivityAnalyzer:
     
     def save_sensitivity_results(self, Si, network_type, output_metric, timestamp):
         """Save sensitivity analysis results to CSV files"""
-        # Create results directory if it doesn't exist
         results_dir = f"analysis_results/{network_type}"
         os.makedirs(results_dir, exist_ok=True)
         
-        # Prepare results as DataFrames
         metrics_df = pd.DataFrame({
             'parameter': Si['names'],
             'mu_star': Si['mu_star'],
             'mu': Si['mu'],
-            'sigma': Si['sigma'],
-            'mu_star_conf': Si['mu_star_conf'],
-            'mu_conf': Si['mu_conf'],
-            'sigma_conf': Si['sigma_conf']
+            'sigma': Si['sigma']
         })
         
-        # Save to CSV
         filename = f"{results_dir}/{output_metric}_{timestamp}.csv"
         metrics_df.to_csv(filename, index=False)
         print(f"Saved sensitivity results to {filename}")
@@ -120,21 +111,19 @@ class SensitivityAnalyzer:
         print(f"Starting Morris analysis for {network_type} network...")
         print(f"Analyzing output metric: {output_metric}")
         
-        # Generate timestamp for this analysis run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Generate Morris samples
         param_values = morris.sample(self.problem, num_trajectories)
         print(f"Generated {len(param_values)} parameter combinations")
         
-        # Prepare arguments for parallel processing
-        args_list = [(params, network_type, 500, 2) for params in param_values]  # Reduced steps and replicates
+        # Parallelisation setup
+        args_list = [(params, network_type, 500, 2) for params in param_values]  
+
+        num_processes = min(cpu_count(), len(param_values))
+        chunk_size = max(1, len(param_values) // (num_processes * 4))
         
-        # Use fewer processes and larger chunks for better efficiency
-        num_processes = min(8, cpu_count() - 1)  # Leave one core free
-        chunk_size = max(2, len(param_values) // (num_processes * 2))
-        
-        print(f"Running simulations using {num_processes} CPU cores (chunk size: {chunk_size})...")
+        print(f"Running simulations using {num_processes} CPU cores (chunk size: {chunk_size})!")
         
         # Run simulations in parallel with progress bar
         results = []
@@ -146,13 +135,9 @@ class SensitivityAnalyzer:
             ):
                 results.append(result)
         
-        # Extract the requested metric from results
         Y = [result[output_metric] for result in results]
-        
-        # Analyze results
         Si = morris_analyze.analyze(self.problem, param_values, np.array(Y))
-        
-        # Save results
+
         results_file = self.save_sensitivity_results(Si, network_type, output_metric, timestamp)
         print(f"Analysis complete. Results saved to: {results_file}")
         

@@ -2,7 +2,7 @@
 This module contains functions for running sensitivity analysis on the model.
 """
 import os
-import matplotlib.pyplot as plt
+from datetime import datetime
 from src.sensitivity_analysis import SensitivityAnalyzer
 
 def run_sensitivity_analysis(network_type="cycle", num_trajectories=10):
@@ -12,56 +12,68 @@ def run_sensitivity_analysis(network_type="cycle", num_trajectories=10):
     
     print(f"\n=== Running sensitivity analysis for {network_type} network ===")
     
-    # Create output directory for plots
-    os.makedirs("analysis_plots/sensitivity", exist_ok=True)
+    # Create timestamp for this analysis run
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    results = {}
     
     for metric in metrics:
         print(f"\nAnalyzing metric: {metric}")
-        Si = analyzer.morris_analysis(
+        Si, _ = analyzer.morris_analysis(
             num_trajectories=num_trajectories,
             network_type=network_type,
             output_metric=metric
         )
-        
-        # Plot and save results
-        fig = analyzer.plot_morris_results(Si, title=f"Sensitivity Analysis - {network_type.capitalize()} Network - {metric}")
-        plt.savefig(f"analysis_plots/sensitivity/{network_type}_{metric}.png")
-        plt.close(fig)
+        results[metric] = Si
         
         # Print detailed results
         analyzer.print_sensitivity_results(Si)
+    
+    return results, timestamp
 
 def run_network_sensitivity_comparison(num_trajectories=10):
     """Compare sensitivity analysis across different network types"""
     analyzer = SensitivityAnalyzer()
     metrics = ['convergence_time', 'correct_theory_rate', 'old_theory_rate']
+    network_types = ['cycle', 'wheel', 'complete']
     
     print("\n=== Running network comparison analysis ===")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
+    all_results = {}
     for metric in metrics:
         print(f"\nAnalyzing metric: {metric}")
-        results = analyzer.compare_networks(
-            num_trajectories=num_trajectories,
-            output_metric=metric
-        )
+        metric_results = {}
         
-        # Print detailed results for each network
-        for network_type, Si in results.items():
+        for network_type in network_types:
+            print(f"\nRunning analysis for {network_type} network")
+            Si, _ = analyzer.morris_analysis(
+                num_trajectories=num_trajectories,
+                network_type=network_type,
+                output_metric=metric
+            )
+            metric_results[network_type] = Si
+            
+            # Print detailed results
             print(f"\nResults for {network_type} network:")
             analyzer.print_sensitivity_results(Si)
+        
+        all_results[metric] = metric_results
+    
+    return all_results, timestamp
 
 def run_full_sensitivity_analysis(num_trajectories=10, run_single=True, run_comparison=True):
     """Run complete sensitivity analysis with options for single network and comparison analyses"""
-    # Create output directory
-    os.makedirs("analysis_plots/sensitivity", exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     if run_single:
         # Run analysis for each network type individually
+        single_results = {}
         for network_type in ['cycle', 'wheel', 'complete']:
-            run_sensitivity_analysis(network_type, num_trajectories)
+            results, _ = run_sensitivity_analysis(network_type, num_trajectories)
+            single_results[network_type] = results
     
     if run_comparison:
         # Run comparison across all network types
-        run_network_sensitivity_comparison(num_trajectories)
+        comparison_results, _ = run_network_sensitivity_comparison(num_trajectories)
     
-    print("\nAnalysis complete! Check the analysis_plots/sensitivity directory for results.") 
+    print("\nAnalysis complete! Results have been saved to analysis_results directory.") 
