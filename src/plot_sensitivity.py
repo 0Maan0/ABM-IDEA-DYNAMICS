@@ -38,17 +38,23 @@ def plot_sensitivity_results(results_df, network_type, metric, save=True):
     # Sort parameters by importance (mu_star)
     results_df = results_df.sort_values('mu_star', ascending=True)
     
-    # Plot mu_star with confidence intervals
-    ax1.barh(range(len(results_df)), results_df['mu_star'], xerr=results_df['mu_star_conf'],
-             capsize=5, alpha=0.7)
+    # Plot mu_star with confidence intervals (if available)
+    if 'mu_star_conf' in results_df.columns:
+        ax1.barh(range(len(results_df)), results_df['mu_star'], xerr=results_df['mu_star_conf'],
+                 capsize=5, alpha=0.7)
+    else:
+        ax1.barh(range(len(results_df)), results_df['mu_star'], alpha=0.7)
     ax1.set_yticks(range(len(results_df)))
     ax1.set_yticklabels(results_df['parameter'])
     ax1.set_xlabel('Mean Absolute Elementary Effect')
     ax1.set_title('Parameter Importance')
     
-    # Plot sigma with confidence intervals
-    ax2.barh(range(len(results_df)), results_df['sigma'], xerr=results_df['sigma_conf'],
-             capsize=5, alpha=0.7)
+    # Plot sigma with confidence intervals (if available)
+    if 'sigma_conf' in results_df.columns:
+        ax2.barh(range(len(results_df)), results_df['sigma'], xerr=results_df['sigma_conf'],
+                 capsize=5, alpha=0.7)
+    else:
+        ax2.barh(range(len(results_df)), results_df['sigma'], alpha=0.7)
     ax2.set_yticks(range(len(results_df)))
     ax2.set_yticklabels(results_df['parameter'])
     ax2.set_xlabel('Standard Deviation')
