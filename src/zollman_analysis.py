@@ -158,7 +158,7 @@ def plot_zollman_figures(num_simulations, save_dir="analysis_plots"):
     print(f"\nPlots saved to {save_dir}/")
 
 if __name__ == "__main__":
-    num_simulations = 1000  # Set number of simulations
+    num_simulations = 10000  # Set number of simulations
     run_again = True  # Set to False if you just want to plot
 
     results_file = f"analysis_results/zollman_results_{num_simulations}sims.csv"
