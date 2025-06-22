@@ -8,8 +8,6 @@ import seaborn as sns
 from datetime import datetime
 
 colors = sns.color_palette("Set2", 8)
-
-# Set plotting parameters for publication quality
 plt.style.use('seaborn-v0_8-paper')
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42

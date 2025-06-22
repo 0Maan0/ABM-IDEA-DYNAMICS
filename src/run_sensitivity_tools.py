@@ -12,7 +12,6 @@ def run_sensitivity_analysis(network_type="cycle", num_trajectories=10):
     
     print(f"\n=== Running sensitivity analysis for {network_type} network ===")
     
-    # Create timestamp for this analysis run
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     results = {}
     
@@ -25,7 +24,6 @@ def run_sensitivity_analysis(network_type="cycle", num_trajectories=10):
         )
         results[metric] = Si
         
-        # Print detailed results
         analyzer.print_sensitivity_results(Si)
     
     return results, timestamp

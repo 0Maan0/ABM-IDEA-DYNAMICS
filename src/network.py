@@ -77,17 +77,17 @@ class ScienceNetworkModel(Model):
     def convergence_status(self):
         """
         According to Zollman's paper, a population has finished learning if one of two conditions are met:
-        1. Every agent takes action A1 (old theory) - no new information can arrive to change their minds
-        2. Every agent believes in φ2 (new theory) with probability > 0.9999
+        1. Every agent takes action A1 (old theory) ==> thus no new information can change their minds
+        2. Every agent believes in phi2 (new theory) with probability > 0.9999
         """
         actions = [agent.current_choice for agent in self.schedule.agents]
         beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
         
-        # Condition 1: Everyone using old theory (A1)
+        # Condition 1: Everyone using old theory 
         if all(action == "old" for action in actions):
             return True
         
-        # Condition 2: Everyone strongly believes in new theory (φ2)
+        # Condition 2: Everyone strongly believes in new theory 
         if all(b > 0.9999 for b in beliefs):
             return True
             

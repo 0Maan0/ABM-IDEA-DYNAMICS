@@ -21,36 +21,44 @@ class ScientistAgent(Agent):
     they want to believe/work with based on expected utility. Then their beieves are updated,
     based on experimental results.
     """
-    def __init__(self, unique_id, model, initial_belief=0.5, belief_strength=1.0):
+    def __init__(self, unique_id, model, initial_belief=0.9, belief_strength=1.0):
         super().__init__(unique_id, model)
         
-        self.belief_in_new_theory = initial_belief  # Belief that the new theory is true
+        self.belief_in_new_theory = initial_belief  # Start with optimistic belief in new theory
         self.belief_strength = belief_strength # Belief strength parameter ==> if this value is higher, the scientist is more resistant to change
     
         self.current_choice = self._choose_theory() # The current theory choice ("old" or "new")
         
-        # Experimental results when working with old or new theory
-        self.old_theory_results = [] 
-        self.new_theory_results = []  
+        # Current round's experimental results
+        self.current_old_theory_result = None 
+        self.current_new_theory_result = None
 
     def _choose_theory(self):
-        """To choose between the theories ==> which theory to believe/work
-            ==> its based on expected utility (remember game theory :) )"""
-        # Always the same payoff for the old theory
-        old_theory_utility = self.model.old_theory_payoff
+        """
+        Choose between theories based on expected success probability.
+        According to paper:
+        - Old theory has fixed success probability of 0.5
+        - For new theory, expected success probability is:
+          P(success) = P(success|New better)*P(New better) + P(success|New worse)*P(New worse)
+        """
+        # Old theory has fixed success probability
+        old_theory_prob = self.model.old_theory_payoff  # 0.5
         
-        # New theory utility looks at which theory is true 
-        new_theory_utility = (
-            self.belief_in_new_theory * self.model.new_theory_payoffs[1] +  # Payoff if new theory is true
-            (1 - self.belief_in_new_theory) * self.model.new_theory_payoffs[0]  # Payoff if new theory is false
+        # For new theory, calculate expected probability of success
+        p_new_better = self.belief_in_new_theory
+        p_success_if_better = self.model.new_theory_payoffs[1]  # 0.4
+        p_success_if_worse = self.model.new_theory_payoffs[0]   # 0.6
+        
+        new_theory_prob = (
+            p_success_if_better * p_new_better +  # P(success|New better)*P(New better)
+            p_success_if_worse * (1 - p_new_better)  # P(success|New worse)*P(New worse)
         )
         
-        return "new" if new_theory_utility > old_theory_utility else "old"
+        return "new" if new_theory_prob > old_theory_prob else "old"
 
     def update_belief(self, success, theory_choice):
         """
-        Paper mentioned bayesian update based on experimental result: so try this:
-        P(New Theory|Result) = P(Result|New Theory) * P(New Theory) / P(Result)
+        Bayesian update based on experimental result
         """
         # Get probabilities for each theory
         p_success_if_new = self.model.new_theory_payoffs[1]
@@ -67,36 +75,42 @@ class ScientistAgent(Agent):
             p_result_if_new = 1 - p_success_if_new
             p_result_if_old = 1 - p_success_if_old
         
-        # Bayes update
+        # Direct Bayes update as in Zollman's paper
         numerator = p_result_if_new * prior
         denominator = p_result_if_new * prior + p_result_if_old * (1 - prior)
         
-        # Update with resistance factor
-        old_belief = self.belief_in_new_theory
-        bayes_update = numerator / denominator
-        self.belief_in_new_theory = old_belief + (bayes_update - old_belief) / self.belief_strength
+        # Update belief directly
+        self.belief_in_new_theory = numerator / denominator
 
     def incorporate_neighbor_evidence(self, neighbor):
-        """Learn from neighbor's experimental results"""
-        # Update based on both old and new theory results
-        for result in neighbor.old_theory_results:
-            self.update_belief(result, "old")
-        for result in neighbor.new_theory_results:
-            self.update_belief(result, "new")
+        """Learn from neighbor's current round experimental results only"""
+        # Update based on neighbor's current round results only
+        if neighbor.current_old_theory_result is not None:
+            self.update_belief(neighbor.current_old_theory_result, "old")
+        if neighbor.current_new_theory_result is not None:
+            self.update_belief(neighbor.current_new_theory_result, "new")
             
     def step(self):
-        # Get binary success/failure outcome
-        true_mean = self.model.get_action_payoff(self.current_choice)
-        success = random.random() < true_mean
+        # Reset current round results
+        self.current_old_theory_result = None
+        self.current_new_theory_result = None
         
+        # Get probability of success for current theory choice
+        prob_success = self.model.get_action_payoff(self.current_choice)
+        
+        # Run experiment and get binary success/failure
+        success = random.random() < prob_success
+        
+        # Store only current round's result
         if self.current_choice == "old":
-            self.old_theory_results.append(success)
+            self.current_old_theory_result = success
         else:
-            self.new_theory_results.append(success)
+            self.current_new_theory_result = success
         
+        # Update based on own result
         self.update_belief(success, self.current_choice)
         
-        # Learn from neighbors experimental results aka evidence
+        # Learn from neighbors' current round results only
         neighbors = self.model.network.neighbors(self.unique_id)
         for n_id in neighbors:
             neighbor = self.model.schedule.agents[n_id]

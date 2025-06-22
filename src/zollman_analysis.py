@@ -38,34 +38,75 @@ def run_zollman_experiment(network_sizes=[2, 4, 6, 8, 10, 12], num_simulations=1
                 new_theory_payoffs=(0.4, 0.6),  # New theory is actually better
                 true_theory="new",
                 belief_strength_range=(0.5, 2.0),
-                max_steps=2000  # Increased to ensure convergence
+                max_steps=2000  
             )
             
-            # Calculate metrics
             df = pd.DataFrame(sim_results)
             # Count only runs that reached correct beliefs
             correct_runs = df[df['theory'] == 'Correct Theory']
             success_rate = len(correct_runs) / num_simulations
-            avg_time = correct_runs['step'].mean() if not correct_runs.empty else 0
+            avg_steps = correct_runs['step'].mean() if not correct_runs.empty else 0
             
             results[size][network_type] = {
                 'success_rate': success_rate,
-                'avg_time': avg_time
+                'avg_steps': avg_steps
             }
             
             print(f"Success rate: {success_rate:.2%}")
-            print(f"Average time to success: {avg_time:.1f} steps")
+            print(f"Average steps to success: {avg_steps:.1f} steps")
             
             # Verify all runs converged
             if len(df) != num_simulations:
                 print(f"Warning: {num_simulations - len(df)} runs did not converge!")
     
+    results_df = pd.DataFrame([
+        {
+            'size': size,
+            'network_type': net_type,
+            'success_rate': data['success_rate'],
+            'avg_steps': data['avg_steps']
+        }
+        for size in results
+        for net_type, data in results[size].items()
+    ])
+    
+    os.makedirs("analysis_results", exist_ok=True)
+    results_df.to_csv(f"analysis_results/zollman_results_{num_simulations}sims.csv", index=False)
+    print(f"\nNumerical results saved to analysis_results/zollman_results_{num_simulations}sims.csv")
+    
     return results
 
-def plot_zollman_figures(results, save_dir="analysis_plots"):
+def load_results(num_simulations):
+    """
+    Load results from saved CSV file.
+    """
+    filepath = f"analysis_results/zollman_results_{num_simulations}sims.csv"
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Results file not found: {filepath}")
+    
+    df = pd.read_csv(filepath)
+    
+    # Convert to the same format as run_zollman_experiment returns
+    results = {}
+    for size in df['size'].unique():
+        results[size] = {}
+        size_data = df[df['size'] == size]
+        for _, row in size_data.iterrows():
+            results[size][row['network_type']] = {
+                'success_rate': row['success_rate'],
+                'avg_steps': row['avg_steps']
+            }
+    
+    return results
+
+def plot_zollman_figures(num_simulations, save_dir="analysis_plots"):
     """
     Recreates Figures 2 and 3 from Zollman's paper with the same styling.
+    Reads data from saved results file.
     """
+    # Load results from file
+    results = load_results(num_simulations)
+    
     sizes = sorted(results.keys())
     network_types = ['cycle', 'wheel', 'complete']
     markers = ['+', 'x', '*']
@@ -90,15 +131,14 @@ def plot_zollman_figures(results, save_dir="analysis_plots"):
     plt.ylim(0.6, 1.0)
     
     os.makedirs(save_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig(f"{save_dir}/learning_results_{timestamp}.pdf", 
+    plt.savefig(f"{save_dir}/learning_results_{num_simulations}sims.pdf", 
                 format='pdf', bbox_inches='tight')
     
     # Figure 3: Speed Results
     plt.figure(figsize=(8, 6))
     for i, network_type in enumerate(network_types):
-        times = [results[size][network_type]['avg_time'] for size in sizes]
-        plt.plot(sizes, times, 
+        steps = [results[size][network_type]['avg_steps'] for size in sizes]
+        plt.plot(sizes, steps, 
                 marker=markers[i], 
                 color=colors[i],
                 label=network_type.capitalize(),
@@ -106,42 +146,28 @@ def plot_zollman_figures(results, save_dir="analysis_plots"):
                 markersize=8)
     
     plt.xlabel('Size')
-    plt.ylabel('Average Time to Success')
+    plt.ylabel('Average Steps to Success')
     plt.legend()
     plt.grid(True)
     plt.xlim(2, 12)
     plt.ylim(0, 1200)
     
-    plt.savefig(f"{save_dir}/speed_results_{timestamp}.pdf", 
+    plt.savefig(f"{save_dir}/speed_results_{num_simulations}sims.pdf", 
                 format='pdf', bbox_inches='tight')
     
     print(f"\nPlots saved to {save_dir}/")
-    return timestamp
 
 if __name__ == "__main__":
-    # Run experiment
-    print("=== Running Zollman's (2011) experiment ===")
-    results = run_zollman_experiment(
-        network_sizes=[2, 4, 6, 8, 10, 12],  
-        num_simulations=1000  
-    )
+    num_simulations = 1000  # Set number of simulations
+    run_again = True  # Set to False if you just want to plot
+
+    results_file = f"analysis_results/zollman_results_{num_simulations}sims.csv"
+    if run_again:
+        print("=== Running Zollman's (2011) experiment ===")
+        run_zollman_experiment(
+            network_sizes=[2, 4, 6, 8, 10, 12],
+            num_simulations=num_simulations
+        )
     
-    # Create plots
     print("\n=== Creating plots ===")
-    timestamp = plot_zollman_figures(results)
-    
-    # Save numerical results
-    results_df = pd.DataFrame([
-        {
-            'size': size,
-            'network_type': net_type,
-            'success_rate': data['success_rate'],
-            'avg_time': data['avg_time']
-        }
-        for size in results
-        for net_type, data in results[size].items()
-    ])
-    
-    os.makedirs("analysis_results", exist_ok=True)
-    results_df.to_csv(f"analysis_results/zollman_results_{timestamp}.csv", index=False)
-    print(f"\nNumerical results saved to analysis_results/zollman_results_{timestamp}.csv") 
+    plot_zollman_figures(num_simulations) 
