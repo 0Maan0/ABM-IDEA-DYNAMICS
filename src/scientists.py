@@ -3,6 +3,15 @@ from mesa.time import SimultaneousActivation
 import networkx as nx
 import random
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.patches import Patch
+import seaborn as sns
+import pandas as pd
+import os
+from datetime import datetime
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
 
 class ScientistAgent(Agent):
     """
@@ -38,50 +47,54 @@ class ScientistAgent(Agent):
         
         return "new" if new_theory_utility > old_theory_utility else "old"
 
-    def update_belief(self, result, theory_choice):
+    def update_belief(self, success, theory_choice):
         """
         Paper mentioned bayesian update based on experimental result: so try this:
         P(New Theory|Result) = P(Result|New Theory) * P(New Theory) / P(Result)
         """
-        if theory_choice == "old":
-            # if you work with the old theory, you don't update your belief
-            return
-            
-        # Current belief in new theory
+        # Get probabilities for each theory
+        p_success_if_new = self.model.new_theory_payoffs[1]
+        p_success_if_old = self.model.new_theory_payoffs[0]
+        
+        # Current belief
         prior = self.belief_in_new_theory
         
-        # Likelihood of result under each theory ==> see paper for example
-        p_result_if_new = self._likelihood(result, self.model.new_theory_payoffs[1])
-        p_result_if_old = self._likelihood(result, self.model.new_theory_payoffs[0])
+        # Calculate likelihood based on success/failure
+        if success:
+            p_result_if_new = p_success_if_new
+            p_result_if_old = p_success_if_old
+        else:
+            p_result_if_new = 1 - p_success_if_new
+            p_result_if_old = 1 - p_success_if_old
         
         # Bayes update
-        bayes_update = (p_result_if_new * prior) / (p_result_if_new * prior + p_result_if_old * (1 - prior))
+        numerator = p_result_if_new * prior
+        denominator = p_result_if_new * prior + p_result_if_old * (1 - prior)
         
-        self.belief_in_new_theory = bayes_update
-
-    def _likelihood(self, result, mean):
-        """Calculate likelihood of result given the mean 
-         this is to determine: P(Result|Theory): """
-        # Assuming a normal distribution for the likelihood
-        return np.exp(-0.5 * ((result - mean) / 0.1) ** 2) / (0.1 * np.sqrt(2 * np.pi))
+        # Update with resistance factor
+        old_belief = self.belief_in_new_theory
+        bayes_update = numerator / denominator
+        self.belief_in_new_theory = old_belief + (bayes_update - old_belief) / self.belief_strength
 
     def incorporate_neighbor_evidence(self, neighbor):
         """Learn from neighbor's experimental results"""
-        # Only learn from new theory results 
+        # Update based on both old and new theory results
+        for result in neighbor.old_theory_results:
+            self.update_belief(result, "old")
         for result in neighbor.new_theory_results:
             self.update_belief(result, "new")
             
     def step(self):
-        # Get payoff from working with chosen theory
+        # Get binary success/failure outcome
         true_mean = self.model.get_action_payoff(self.current_choice)
-        result = random.gauss(true_mean, 0.1) # tbh i dont quite understand
+        success = random.random() < true_mean
         
         if self.current_choice == "old":
-            self.old_theory_results.append(result)
+            self.old_theory_results.append(success)
         else:
-            self.new_theory_results.append(result)
+            self.new_theory_results.append(success)
         
-        self.update_belief(result, self.current_choice)
+        self.update_belief(success, self.current_choice)
         
         # Learn from neighbors experimental results aka evidence
         neighbors = self.model.network.neighbors(self.unique_id)

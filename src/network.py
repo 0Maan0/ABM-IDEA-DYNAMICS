@@ -81,11 +81,11 @@ class ScienceNetworkModel(Model):
         beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
         
         # If everyone believes old theory, nothing more will happen
-        if all(a == "old" for a in actions):
+        if all(b < 0.5 for b in beliefs):
             return True
             
         # convergence
-        if all(b > 0.9999 or b < 0.0001 for b in beliefs):
+        if all(b > 0.9 or b < 0.1 for b in beliefs):
             return True
             
         return False
@@ -93,13 +93,12 @@ class ScienceNetworkModel(Model):
     def get_convergence_info(self):
         if self.converged:
             beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
-            actions = [agent.current_choice for agent in self.schedule.agents]
             
             # Check if converged to all believing old theory
-            if all(a == "old" for a in actions):
+            if all(b < 0.5 for b in beliefs):
                 theory = "Old Theory"
             # Otherwise check if beliefs converged to correct theory
-            elif all(belief > 0.5 for belief in beliefs) == (self.true_theory == "new"):
+            elif all(b > 0.5 for b in beliefs) == (self.true_theory == "new"):
                 theory = "Correct Theory"
             else:
                 theory = "Incorrect Theory"
