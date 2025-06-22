@@ -11,6 +11,8 @@ from src.network import ScienceNetworkModel
 import pandas as pd
 import os
 from datetime import datetime
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
 
 # Plotting parameters
 plt.rc('text', usetex=True)
@@ -126,6 +128,42 @@ def save_results_as_csv(results, filename="test_results.csv"):
     df.to_csv(filepath, index=False)
     print(f"Results saved to {filepath}")
 
+def _run_single_simulation(args):
+    """Helper function for parallel processing"""
+    sim_id, params = args
+    
+    # Create and run the model
+    model = ScienceNetworkModel(
+        num_agents=params['num_agents'],
+        network_type=params['network_type'],
+        old_theory_payoff=params['old_theory_payoff'],
+        new_theory_payoffs=params['new_theory_payoffs'],
+        true_theory=params['true_theory'],
+        belief_strength_range=params['belief_strength_range']
+    )
+    
+    # Run until convergence
+    while not model.converged and model.step_count < params['max_steps']:
+        model.step()
+    
+    # Get convergence info
+    conv_info = model.get_convergence_info()
+    
+    # Add simulation metadata
+    result = {
+        'simulation_id': sim_id + 1,
+        'network_type': params['network_type'],
+        'num_agents': params['num_agents'],
+        'old_theory_payoff': params['old_theory_payoff'],
+        'new_theory_payoff_if_old_true': params['new_theory_payoffs'][0],
+        'new_theory_payoff_if_new_true': params['new_theory_payoffs'][1],
+        'true_theory': params['true_theory'],
+        'belief_strength_range': params['belief_strength_range']
+    }
+    result.update(conv_info)
+    
+    return result
+
 def run_simulations_until_convergence(num_simulations=100, num_agents=10, network_type="cycle",
                                      old_theory_payoff=0.5, new_theory_payoffs=(0.4, 0.6),
                                      true_theory="new", belief_strength_range=(0.5, 2.0),
@@ -133,37 +171,68 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
     """
     The most important function of this module that you can call on in the main.py to run multiple simulations
     """
-    all_results = []
-    
-    for i in range(num_simulations):
-        print(f"==> Running simulation {i + 1} with {num_agents} agents on a {network_type} network :) <==\n")
-        result = {}
-        result['simulation_id'] = i + 1
-        result['network_type'] = network_type
-
-        # Create and run the model
-        conv_info = create_and_run_model(
-            num_agents=num_agents,
-            network_type=network_type,
-            old_theory_payoff=old_theory_payoff,
-            new_theory_payoffs=new_theory_payoffs,
-            true_theory=true_theory,
-            belief_strength_range=belief_strength_range,
-            use_animation=use_animation,
-            max_steps=max_steps,
-            animation_params=animation_params,
-            show_final_state=show_final_state
-        )
+    # Can't parallelize if using animation or showing final state
+    if use_animation or show_final_state:
+        all_results = []
+        for i in range(num_simulations):
+            print(f"==> Running simulation {i + 1} with {num_agents} agents on a {network_type} network :) <==\n")
+            result = {}
+            result['simulation_id'] = i + 1
+            result['network_type'] = network_type
+            
+            # Create and run the model
+            conv_info = create_and_run_model(
+                num_agents=num_agents,
+                network_type=network_type,
+                old_theory_payoff=old_theory_payoff,
+                new_theory_payoffs=new_theory_payoffs,
+                true_theory=true_theory,
+                belief_strength_range=belief_strength_range,
+                use_animation=use_animation,
+                max_steps=max_steps,
+                animation_params=animation_params,
+                show_final_state=show_final_state
+            )
+            
+            result.update(conv_info)
+            result['num_agents'] = num_agents
+            result['old_theory_payoff'] = old_theory_payoff
+            result['new_theory_payoff_if_old_true'] = new_theory_payoffs[0]
+            result['new_theory_payoff_if_new_true'] = new_theory_payoffs[1]
+            result['true_theory'] = true_theory
+            result['belief_strength_range'] = belief_strength_range
+            all_results.append(result)
+    else:
+        # Prepare parameters for parallel processing
+        params = {
+            "num_agents": num_agents,
+            "network_type": network_type,
+            "old_theory_payoff": old_theory_payoff,
+            "new_theory_payoffs": new_theory_payoffs,
+            "true_theory": true_theory,
+            "belief_strength_range": belief_strength_range,
+            "max_steps": max_steps
+        }
         
-        result.update(conv_info)
-        result['num_agents'] = num_agents
-        result['old_theory_payoff'] = old_theory_payoff
-        result['new_theory_payoff_if_old_true'] = new_theory_payoffs[0]
-        result['new_theory_payoff_if_new_true'] = new_theory_payoffs[1]
-        result['true_theory'] = true_theory
-        result['belief_strength_range'] = belief_strength_range
-        all_results.append(result)
+        # Create arguments for parallel processing
+        args_list = [(i, params) for i in range(num_simulations)]
+        
+        # Calculate optimal number of processes and chunk size
+        num_processes = min(cpu_count(), num_simulations)
+        chunk_size = max(1, num_simulations // (num_processes * 4))  # Adjust chunk size based on number of simulations
+        
+        print(f"\nRunning {num_simulations} simulations using {num_processes} CPU cores (chunk size: {chunk_size})...")
+        
+        # Run simulations in parallel with progress bar
+        with Pool(processes=num_processes) as pool:
+            all_results = list(tqdm(
+                pool.imap(_run_single_simulation, args_list, chunksize=chunk_size),
+                total=num_simulations,
+                desc="Running simulations"
+            ))
     
+    # Save results
+    os.makedirs(f"simulation_results/{network_type}", exist_ok=True)
     csv_filename = f"{network_type}/{num_agents}agents_{num_simulations}sims_{belief_strength_range}.csv"
     save_results_as_csv(all_results, csv_filename)
     
@@ -179,3 +248,5 @@ def plot_network_statistics(model):
     # id say write a seperate class for them but call on them in a nice manner here
     # this way we can keep the main clean
     pass
+
+
