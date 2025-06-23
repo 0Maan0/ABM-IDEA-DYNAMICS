@@ -99,7 +99,7 @@ def load_results(num_simulations):
     
     return results
 
-def plot_zollman_figures(num_simulations, save_dir="analysis_plots"):
+def plot_zollman_figures(num_simulations, save_dir="analysis_plots/zollman_reproduction"):
     """
     Recreates Figures 2 and 3 from Zollman's paper with the same styling.
     Reads data from saved results file.
