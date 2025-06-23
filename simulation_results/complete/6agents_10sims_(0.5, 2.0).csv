@@ -1,0 +1,11 @@
+simulation_id,network_type,num_agents,old_theory_payoff,new_theory_payoff_if_old_true,new_theory_payoff_if_new_true,true_theory,belief_strength_range,converged,step,theory
+1,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,3,Old Theory
+2,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,21,Correct Theory
+3,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,64,Correct Theory
+4,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,1,Old Theory
+5,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,20,Correct Theory
+6,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,38,Correct Theory
+7,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,25,Old Theory
+8,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,13,Old Theory
+9,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,36,Correct Theory
+10,complete,6,0.5,0.4,0.6,new,"(0.5, 2.0)",True,17,Correct Theory

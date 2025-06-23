@@ -1,135 +1,147 @@
+"""
+This module performs sensitivity analysis on the ABM model.
+"""
 import numpy as np
 from SALib.sample import morris
 from SALib.analyze import morris as morris_analyze
 from src.network import ScienceNetworkModel
 import matplotlib.pyplot as plt
+import pandas as pd
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
+import os
+from datetime import datetime
 
 class SensitivityAnalyzer:
     def __init__(self):
         self.problem = {
-            'num_vars': 5,
-            'names': ['num_agents', 'prior_old_strength', 'prior_new_strength', 'true_prob_old', 'true_prob_new'],
+            'num_vars': 6,
+            'names': [
+                'num_agents',
+                'old_theory_payoff',
+                'new_theory_payoff_old_true',
+                'new_theory_payoff_new_true',
+                'belief_strength_min',
+                'belief_strength_max'
+            ],
             'bounds': [
-                [5, 50],      # num_agents
-                [0.1, 0.9],   # prior_old_strength (how strong initial old beliefs are)
-                [0.1, 0.9],   # prior_new_strength (how strong initial new beliefs are)
-                [0.1, 0.9],   # true_prob_old (actual probability old theory is correct)
-                [0.1, 0.9]    # true_prob_new (actual probability new theory is correct)
+                [5, 50],       # num_agents
+                [0.1, 0.9],    # old_theory_payoff
+                [0.1, 0.9],    # new_theory_payoff when old theory is true
+                [0.1, 0.9],    # new_theory_payoff when new theory is true
+                [0.1, 2.0],    # belief_strength_range min
+                [0.5, 4.0]     # belief_strength_range max
             ]
         }
+        
+        # Create directories for results if they don't exist
+        os.makedirs("analysis_results", exist_ok=True)
+        os.makedirs("analysis_plots", exist_ok=True)
     
-    def run_model_instance(self, params, network_type="cycle", num_steps=50, num_replicates=5):
-        """
-        Run a single instance of the model with given parameters
-        
-        Returns:
-        - Dictionary with outcome metrics
-        """
-        num_agents, prior_old_strength, prior_new_strength, true_prob_old, true_prob_new = params
-        num_agents = int(num_agents)
-        
-        # Store results from multiple replicates to account for stochasticity
-        convergence_times = []
-        final_consensuses = []
-        adoption_rates = []
-        
-        for rep in range(num_replicates):
-            model = ScienceNetworkModel(
-                num_agents=num_agents,
-                network_type=network_type,
-                true_probs=(true_prob_old, true_prob_new)
-            )
+    def _run_single_instance(self, args):
+        """Helper function for parallel processing"""
+        try:
+            params, network_type, num_steps, num_replicates = args
+            results = []
             
-            # Modify initial beliefs based on sensitivity parameters
-            self._set_initial_beliefs(model, prior_old_strength, prior_new_strength)
+            for rep in range(num_replicates):
+                model = ScienceNetworkModel(
+                    num_agents=int(params[0]),
+                    network_type=network_type,
+                    old_theory_payoff=params[1],
+                    new_theory_payoffs=(params[2], params[3]),
+                    true_theory="new",  # Fixed for sensitivity analysis
+                    belief_strength_range=(params[4], max(params[4] + 0.1, params[5]))
+                )
+                
+                # Run until convergence or max steps
+                for _ in range(num_steps):
+                    if model.converged:
+                        break
+                    model.step()
+                
+                # Get convergence info
+                conv_info = model.get_convergence_info()
+                results.append(conv_info)
             
-            # Run simulation
-            convergence_time, final_consensus, adoption_rate = self._run_simulation(model, num_steps)
+            # Calculate metrics
+            df = pd.DataFrame(results)
+            convergence_time = df[df['converged']]['step'].mean()
+            if np.isnan(convergence_time):
+                convergence_time = num_steps
+                
+            correct_theory_rate = (df['theory'] == 'Correct Theory').mean()
+            old_theory_rate = (df['theory'] == 'Old Theory').mean()
             
-            convergence_times.append(convergence_time)
-            final_consensuses.append(final_consensus)
-            adoption_rates.append(adoption_rate)
-        
-        return {
-            'convergence_time': np.mean(convergence_times),
-            'final_consensus': np.mean(final_consensuses),  # 0=old theory, 1=new theory
-            'adoption_rate': np.mean(adoption_rates),
-            'convergence_std': np.std(convergence_times)
-        }
+            return {
+                'convergence_time': convergence_time,
+                'correct_theory_rate': correct_theory_rate,
+                'old_theory_rate': old_theory_rate
+            }
+        except Exception as e:
+            print(f"Error in simulation: {str(e)}")
+            return {
+                'convergence_time': num_steps,
+                'correct_theory_rate': 0,
+                'old_theory_rate': 0
+            }
     
-    def _set_initial_beliefs(self, model, prior_old_strength, prior_new_strength):
-        """
-        Set initial beliefs based on sensitivity analysis parameters
-        """
-        # Randomly select one agent to have strong belief in new theory
-        original_agent = np.random.randint(0, model.num_agents)
+    def save_sensitivity_results(self, Si, network_type, output_metric, timestamp):
+        """Save sensitivity analysis results to CSV files"""
+        results_dir = f"analysis_results/{network_type}"
+        os.makedirs(results_dir, exist_ok=True)
         
-        for i, agent in enumerate(model.schedule.agents):
-            if i == original_agent:
-                agent.belief_old = 1 - prior_new_strength
-                agent.belief_new = prior_new_strength
-            else:
-                agent.belief_old = prior_old_strength
-                agent.belief_new = 1 - prior_old_strength
-            
-            # Update current choice based on beliefs
-            agent.current_choice = 0 if agent.belief_old > agent.belief_new else 1
-    
-    def _run_simulation(self, model, num_steps):
-        """
-        Run the simulation and return outcome metrics
-        """
-        initial_choices = [agent.current_choice for agent in model.schedule.agents]
+        metrics_df = pd.DataFrame({
+            'parameter': Si['names'],
+            'mu_star': Si['mu_star'],
+            'mu': Si['mu'],
+            'sigma': Si['sigma']
+        })
         
-        for step in range(num_steps):
-            model.step()
-            
-            # Check for convergence
-            current_choices = [agent.current_choice for agent in model.schedule.agents]
-            if len(set(current_choices)) == 1:  # All agents agree
-                convergence_time = step + 1
-                final_consensus = current_choices[0]
-                adoption_rate = sum(current_choices) / len(current_choices)
-                return convergence_time, final_consensus, adoption_rate
+        filename = f"{results_dir}/{output_metric}_{timestamp}.csv"
+        metrics_df.to_csv(filename, index=False)
+        print(f"Saved sensitivity results to {filename}")
         
-        # If no convergence, return final state
-        final_choices = [agent.current_choice for agent in model.schedule.agents]
-        final_consensus = 1 if sum(final_choices) > len(final_choices) / 2 else 0
-        adoption_rate = sum(final_choices) / len(final_choices)
-        
-        return num_steps, final_consensus, adoption_rate
+        return filename
     
     def morris_analysis(self, num_trajectories=10, network_type="cycle", output_metric='convergence_time'):
         """
-        Perform Morris sensitivity analysis
-        
-        Parameters:
-        - num_trajectories: Number of Morris trajectories to generate
-        - network_type: Type of network ('cycle', 'wheel', 'complete')
-        - output_metric: Which output to analyze ('convergence_time', 'adoption_rate', etc.)
-        
-        Returns:
-        - Dictionary with Morris sensitivity indices
+        Perform Morris sensitivity analysis and save results
         """
         print(f"Starting Morris analysis for {network_type} network...")
         print(f"Analyzing output metric: {output_metric}")
         
-        # Morris sample
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Generate Morris samples
         param_values = morris.sample(self.problem, num_trajectories)
         print(f"Generated {len(param_values)} parameter combinations")
         
-        # Run model for each parameter combination
-        Y = []
-        for i, params in enumerate(param_values):
-            if i % 10 == 0:
-                print(f"Running simulation {i+1}/{len(param_values)}")
-            
-            result = self.run_model_instance(params, network_type)
-            Y.append(result[output_metric])
+        # Parallelisation setup
+        args_list = [(params, network_type, 500, 2) for params in param_values]  
+
+        num_processes = min(cpu_count(), len(param_values))
+        chunk_size = max(1, len(param_values) // (num_processes * 4))
         
+        print(f"Running simulations using {num_processes} CPU cores (chunk size: {chunk_size})!")
+        
+        # Run simulations in parallel with progress bar
+        results = []
+        with Pool(processes=num_processes) as pool:
+            for result in tqdm(
+                pool.imap_unordered(self._run_single_instance, args_list, chunksize=chunk_size),
+                total=len(param_values),
+                desc="Running simulations"
+            ):
+                results.append(result)
+        
+        Y = [result[output_metric] for result in results]
         Si = morris_analyze.analyze(self.problem, param_values, np.array(Y))
+
+        results_file = self.save_sensitivity_results(Si, network_type, output_metric, timestamp)
+        print(f"Analysis complete. Results saved to: {results_file}")
         
-        return Si
+        return Si, timestamp
     
     def compare_networks(self, num_trajectories=10, output_metric='convergence_time'):
         """
@@ -137,12 +149,15 @@ class SensitivityAnalyzer:
         """
         networks = ['cycle', 'wheel', 'complete']
         results = {}
+        timestamps = {}
         
         for network in networks:
             print(f"\n--- Analyzing {network} network ---")
-            results[network] = self.morris_analysis(num_trajectories, network, output_metric)
+            Si, timestamp = self.morris_analysis(num_trajectories, network, output_metric)
+            results[network] = Si
+            timestamps[network] = timestamp
         
-        return results
+        return results, timestamps
     
     def plot_morris_results(self, Si, title="Morris Sensitivity Analysis"):
         """
@@ -154,19 +169,18 @@ class SensitivityAnalyzer:
         ax1.barh(range(len(Si['names'])), Si['mu_star'])
         ax1.set_yticks(range(len(Si['names'])))
         ax1.set_yticklabels(Si['names'])
-        ax1.set_xlabel('μ* (Mean Absolute Elementary Effect)')
+        ax1.set_xlabel('Mean Absolute Elementary Effect')
         ax1.set_title('Parameter Importance')
         
         # Plot sigma (standard deviation of elementary effects)
         ax2.barh(range(len(Si['names'])), Si['sigma'])
         ax2.set_yticks(range(len(Si['names'])))
         ax2.set_yticklabels(Si['names'])
-        ax2.set_xlabel('σ (Standard Deviation)')
+        ax2.set_xlabel('Standard Deviation')
         ax2.set_title('Parameter Interactions/Non-linearity')
         
         plt.suptitle(title)
         plt.tight_layout()
-        plt.show()
         
         return fig
     
@@ -178,11 +192,11 @@ class SensitivityAnalyzer:
         print("MORRIS SENSITIVITY ANALYSIS RESULTS")
         print("="*50)
         
-        print(f"{'Parameter':<20} {'μ*':<10} {'σ':<10} {'μ':<10}")
-        print("-" * 50)
+        print(f"{'Parameter':<25} {'μ*':<10} {'σ':<10} {'μ':<10}")
+        print("-" * 55)
         
         for i, name in enumerate(Si['names']):
-            print(f"{name:<20} {Si['mu_star'][i]:<10.3f} {Si['sigma'][i]:<10.3f} {Si['mu'][i]:<10.3f}")
+            print(f"{name:<25} {Si['mu_star'][i]:<10.3f} {Si['sigma'][i]:<10.3f} {Si['mu'][i]:<10.3f}")
         
         print("\nInterpretation:")
         print("- μ* (mu_star): Overall parameter importance")
