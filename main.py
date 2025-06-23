@@ -35,8 +35,8 @@ if __name__ == "__main__":
     
     # Choose what code to run
     run_regular_simulations = False #True  
-    run_sensitivity = False #True
-    create_plots = True  # New flag for plotting
+    run_sensitivity = True #True
+    create_plots = True  
     
     if run_regular_simulations:
         print("\n=== Running Regular Simulations ===")
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         print("\n=== Running Sensitivity Analysis ===")
         # Run sensitivity analysis
         run_full_sensitivity_analysis(
-            num_trajectories=10,  # Number of trajectories for Morris analysis
+            num_trajectories=714,  # Will generate about 714 * 7 = 4,998 parameter combinations (we should do 5k)
             run_single=True,      # Run analysis for each network type
             run_comparison=True   # Run comparison across network types
         )
