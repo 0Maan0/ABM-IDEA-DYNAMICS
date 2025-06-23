@@ -30,6 +30,7 @@ class ScienceNetworkModel(Model):
         self.network = self._create_network(network_type)
         self.step_count = 0
         self.converged = False
+        self.influence_scaling = "probit"
         
         # Start scientists with random beliefs about which theory is true
         # TODO: make different initial conditions for this?
