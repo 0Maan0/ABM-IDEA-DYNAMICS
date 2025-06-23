@@ -34,9 +34,12 @@ if __name__ == "__main__":
     }
     
     # Choose what code to run
-    run_regular_simulations = False #True  
+    run_regular_simulations = True #True  
     run_sensitivity = True #True
-    create_plots = True  
+    create_plots = True
+    
+    # Sensitivity analysis parameters
+    num_trajectories = 715  # Will generate about 715 * 7 = 5005 parameter combinations (we should do 5k)
     
     if run_regular_simulations:
         print("\n=== Running Regular Simulations ===")
@@ -59,7 +62,7 @@ if __name__ == "__main__":
         print("\n=== Running Sensitivity Analysis ===")
         # Run sensitivity analysis
         run_full_sensitivity_analysis(
-            num_trajectories=714,  # Will generate about 714 * 7 = 4,998 parameter combinations (we should do 5k)
+            num_trajectories=num_trajectories,
             run_single=True,      # Run analysis for each network type
             run_comparison=True   # Run comparison across network types
         )
@@ -68,9 +71,9 @@ if __name__ == "__main__":
         print("\n=== Creating Sensitivity Analysis Plots ===")
         # Create plots for each network type
         for net_type in ['cycle', 'wheel', 'complete']:
-            plot_all_metrics(network_type=net_type)
+            plot_all_metrics(network_type=net_type, num_trajectories=num_trajectories)
             
         # Create comparison plots across network types
-        plot_all_comparisons()
+        plot_all_comparisons(num_trajectories=num_trajectories)
         
         print("All plots have been saved to the analysis_plots directory!")
