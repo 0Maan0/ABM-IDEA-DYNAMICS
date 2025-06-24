@@ -35,7 +35,7 @@ if __name__ == "__main__":
     
     # Choose what code to run
     run_regular_simulations = True #True  
-    run_sensitivity = True #True
+    run_sensitivity = False #True
     create_plots = True
     
     # Sensitivity analysis parameters
@@ -77,3 +77,5 @@ if __name__ == "__main__":
         plot_all_comparisons(num_trajectories=num_trajectories)
         
         print("All plots have been saved to the analysis_plots directory!")
+
+    

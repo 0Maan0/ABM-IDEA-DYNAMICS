@@ -20,7 +20,7 @@ class ScienceNetworkModel(Model):
         belief_strength_range=(0.5, 2.0),
         noise="off",
         noise_loc=0.0,
-        noise_std=0.1
+        noise_std=0.5
     ):
         super().__init__()
         self.num_agents = num_agents
