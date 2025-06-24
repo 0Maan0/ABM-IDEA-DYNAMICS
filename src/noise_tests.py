@@ -46,7 +46,6 @@ def run_noise_experiment(
                 success_rate = len(correct) / num_simulations
                 avg_steps = correct['step'].mean() if not correct.empty else 0
 
-                # ✅ Correct nested structure
                 results[network_type][noise_std][size] = {
                     'success_rate': success_rate,
                     'avg_steps': avg_steps
@@ -61,7 +60,6 @@ def run_noise_experiment(
                           " runs did not converge!")
                 
     return results
-
 
 
 def save_noise_results_as_csv(results, filename="noise_experiment_results.csv"):
