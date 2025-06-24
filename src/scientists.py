@@ -43,9 +43,16 @@ class ScientistAgent(Agent):
         """
         # Old theory has fixed success probability
         old_theory_prob = self.model.old_theory_payoff  # 0.5
+
+        # Generate noise (Gaussian distribution) if noise is active in model. Center is 0
+        if self.model.noise_active == "on":
+            noise = np.random.normal(
+                loc=self.model.noise_loc, scale=self.model.noise_std)
+        else:
+            noise = 0.0
         
         # For new theory, calculate expected probability of success
-        p_new_better = self.belief_in_new_theory
+        p_new_better = self.belief_in_new_theory + noise
         p_success_if_better = self.model.new_theory_payoffs[1]  # 0.4
         p_success_if_worse = self.model.new_theory_payoffs[0]   # 0.6
         
