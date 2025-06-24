@@ -17,7 +17,8 @@ class ScienceNetworkModel(Model):
         old_theory_payoff=0.5,  # Payoff for believing the old theory
         new_theory_payoffs=(0.4, 0.6),  # Payoffs for believing new theory when (old theory true, new theory true)
         true_theory="new",
-        belief_strength_range=(0.5, 2.0)
+        belief_strength_range=(0.5, 2.0),
+        noise="off"
     ):
         super().__init__()
         self.num_agents = num_agents
@@ -30,6 +31,7 @@ class ScienceNetworkModel(Model):
         self.network = self._create_network(network_type)
         self.step_count = 0
         self.converged = False
+        self.noise_active = noise
         
         # Start scientists with random beliefs about which theory is true
         # TODO: make different initial conditions for this?
