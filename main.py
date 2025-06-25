@@ -9,12 +9,13 @@ from src.plot_sensitivity_results import (
 )
 from src.super_scientist import SuperScientistAgent
 from src.scientists import ScientistAgent
+from src.single_run_analysis import analyze_and_plot_results
 
 if __name__ == "__main__":
     # Model parameters
     num_agents = 10  # Number of scientists in the network
     network_type = "cycle"  # Options: 'cycle', 'wheel', 'complete'
-    
+    agent_class = SuperScientistAgent  # Choose the agent type (SuperScientistAgent or ScientistAgent)
     # Theory payoff parameters
     old_theory_payoff = 0.5  # Payoff for working with the old theory
     new_theory_payoffs = (0.4, 0.6)  # Payoffs for working with the new theory when either (old theory true, new theory true)
@@ -47,7 +48,7 @@ if __name__ == "__main__":
         print("\n=== Running Regular Simulations ===")
         # Run the simulations with the above chosen parameters
         run_simulations_until_convergence(
-            agent_class= SuperScientistAgent,
+            agent_class= agent_class,
             num_simulations=num_simulations,
             num_agents=num_agents,
             network_type=network_type,
@@ -59,6 +60,16 @@ if __name__ == "__main__":
             max_steps=max_steps,
             animation_params=animation_params,
             show_final_state=show_final_state
+        )
+        
+        # Analyze and plot the results
+        print("\n=== Analyzing Simulation Results ===")
+        analyze_and_plot_results(
+            network_type=network_type,
+            num_agents=num_agents,
+            num_simulations=num_simulations,
+            belief_range=belief_strength_range,
+            agent_type=agent_class.__name__,
         )
     
     if run_sensitivity_analysis:
