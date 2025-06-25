@@ -8,12 +8,17 @@ import seaborn as sns
 import numpy as np
 import networkx as nx
 from src.network import ScienceNetworkModel
+from src.scientists import ScientistAgent
 import pandas as pd
 import os
 from datetime import datetime
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
 
-# Plotting parameters
-plt.rc('text', usetex=True)
+plt.style.use('seaborn-v0_8-paper')
+plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams['ps.fonttype'] = 42
+plt.rc('text', usetex=False)
 plt.rc('font', family='serif')
 
 colors = sns.color_palette("Set2", 8)
@@ -23,14 +28,14 @@ def animate_model(model, num_frames=200, interval=500, steps_per_frame=1, max_st
     Function to make an animation of the evolution of the model.
     """
     def get_colors():
-        return [colors[1] if agent.current_choice == 0 else colors[0] for agent in model.schedule.agents]
+        return [colors[1] if agent.current_choice == "old" else colors[0] for agent in model.schedule.agents]
     
     fig, ax = plt.subplots(figsize=(6, 6))
     G = model.network
     pos = nx.spring_layout(G, seed=69)  
     legend_elements = [
-        Patch(facecolor=colors[1], edgecolor='k', label='Believes Old Theory'),
-        Patch(facecolor=colors[0], edgecolor='k', label='Believes New Theory')
+        Patch(facecolor=colors[1], edgecolor='k', label='Working with Old Theory'),
+        Patch(facecolor=colors[0], edgecolor='k', label='Working with New Theory')
     ]
     
     should_stop = [False] # Apparently use list cause its muteable
@@ -50,14 +55,20 @@ def animate_model(model, num_frames=200, interval=500, steps_per_frame=1, max_st
         ax.set_title(f"Step {model.step_count}")
         ax.legend(handles=legend_elements, loc='upper right')
     
-    # Determine the number of frames based on max_steps and steps_per_frame
     if max_steps:
         actual_frames = min(num_frames, max_steps // steps_per_frame)
     else:
         actual_frames = num_frames
         
     anim = animation.FuncAnimation(fig, update, frames=actual_frames, interval=interval, repeat=False)
-    plt.show()
+    
+    # Only save animation as PDF if requested
+    if hasattr(model, 'save_plots') and model.save_plots:
+        os.makedirs("analysis_plots/animations", exist_ok=True)
+        anim.save(f"analysis_plots/animations/model_evolution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf", 
+                 writer='pdf', dpi=300)
+    else:
+        plt.show()
 
 def run_simulation_until_convergence(model, max_steps=1000):
     """
@@ -79,12 +90,30 @@ def show_final_state(model):
     # we dont need to model all iterations but you can check convergence
     animate_model(model, num_frames=1, interval=1000, steps_per_frame=1)
 
-def create_and_run_model(num_agents=10, network_type="cycle", true_probs=(0.2, 0.8), 
-                        use_animation=True, max_steps=1000, animation_params=None, show_final_state=False):
-    """ 
-    A main functin that creates the model, runs it and saves it
-    """
-    model = ScienceNetworkModel(num_agents=num_agents, network_type=network_type, true_probs=true_probs)
+def create_and_run_model(
+    agent_class=ScientistAgent,  # Choice: ScientistAgent or SuperScientistAgent
+    num_agents=10, 
+    network_type="cycle",
+    old_theory_payoff=0.5, 
+    new_theory_payoffs=(0.4, 0.6),
+    true_theory="new", 
+    belief_strength_range=(0.5, 2.0),
+    use_animation=False,
+    max_steps=1000,
+    animation_params=None,
+    show_final_state=False,
+    noise="off"):
+
+    model = ScienceNetworkModel(
+        agent_class=agent_class,  
+        num_agents=num_agents,
+        network_type=network_type,
+        old_theory_payoff=old_theory_payoff,
+        new_theory_payoffs=new_theory_payoffs,
+        true_theory=true_theory,
+        belief_strength_range=belief_strength_range,
+        noise=noise
+    )
     
     if use_animation:
         default_params = {
@@ -113,46 +142,119 @@ def save_results_as_csv(results, filename="test_results.csv"):
     df.to_csv(filepath, index=False)
     print(f"Results saved to {filepath}")
 
-def run_simulations_until_convergence(num_simulations=100, num_agents=10, network_type="cycle", true_probs=(0.2, 0.8), 
-                                      use_animation=False, max_steps=1000, animation_params=None, show_final_state=False):
+def _run_single_simulation(args):
+    """Helper function for parallel processing"""
+    sim_id, params = args
+    
+    # Create and run the model
+    model = ScienceNetworkModel(
+        agent_class=params['agent_class'],
+        num_agents=params['num_agents'],
+        network_type=params['network_type'],
+        old_theory_payoff=params['old_theory_payoff'],
+        new_theory_payoffs=params['new_theory_payoffs'],
+        true_theory=params['true_theory'],
+        belief_strength_range=params['belief_strength_range'],
+        noise=params['noise']
+    )
+    
+    # Run until convergence
+    while not model.converged and model.step_count < params['max_steps']:
+        model.step()
+    
+    conv_info = model.get_convergence_info()
+    
+    # Add simulation data
+    result = {
+        'simulation_id': sim_id + 1,
+        'agent_class': params['agent_class'].__name__,
+        'network_type': params['network_type'],
+        'num_agents': params['num_agents'],
+        'old_theory_payoff': params['old_theory_payoff'],
+        'new_theory_payoff_if_old_true': params['new_theory_payoffs'][0],
+        'new_theory_payoff_if_new_true': params['new_theory_payoffs'][1],
+        'true_theory': params['true_theory'],
+        'belief_strength_range': params['belief_strength_range']
+    }
+    result.update(conv_info)
+    
+    return result
+
+def run_simulations_until_convergence(num_simulations=100, num_agents=10, network_type="cycle",
+                                     old_theory_payoff=0.5, new_theory_payoffs=(0.4, 0.6),
+                                     true_theory="new", belief_strength_range=(0.5, 2.0),
+                                     use_animation=False, max_steps=1000, noise="off", noise_std=0.0, 
+                                     animation_params=None, show_final_state=False,
+                                     agent_class=ScientistAgent):
     """
     The most important function of this module that you can call on in the main.py to run multiple simulations
     """
-    all_results = []
-    
-    for i in range(num_simulations):
-        print(f"==> Running simulation {i + 1} with {num_agents} agents on a {network_type} network :) <==\n")
-        result = {}
-        result['simulation_id'] = i + 1
-        result['network_type'] = network_type
-
-        # Create and run the model
-        conv_info = create_and_run_model(
-            num_agents=num_agents,
-            network_type=network_type,
-            true_probs=true_probs,
-            use_animation=use_animation,
-            max_steps=max_steps,
-            animation_params=animation_params,
-            show_final_state=show_final_state
-        )
+    # Can't parallelize if using animation or showing final state
+    if use_animation or show_final_state:
+        all_results = []
+        for i in range(num_simulations):
+            print(f"==> Running simulation {i + 1} with {num_agents} agents on a {network_type} network :) <==\n")
+            result = {}
+            result['simulation_id'] = i + 1
+            result['agent_class'] = agent_class.__name__
+            result['network_type'] = network_type
+            # Create and run the model
+            conv_info = create_and_run_model(
+                agent_class=agent_class,  
+                num_agents=num_agents,
+                network_type=network_type,
+                old_theory_payoff=old_theory_payoff,
+                new_theory_payoffs=new_theory_payoffs,
+                true_theory=true_theory,
+                belief_strength_range=belief_strength_range,
+                use_animation=use_animation,
+                max_steps=max_steps,
+                animation_params=animation_params,
+                show_final_state=show_final_state,
+                noise=noise,
+                noise_std=noise_std
+            )
+            
+            result.update(conv_info)
+            result['num_agents'] = num_agents
+            result['old_theory_payoff'] = old_theory_payoff
+            result['new_theory_payoff_if_old_true'] = new_theory_payoffs[0]
+            result['new_theory_payoff_if_new_true'] = new_theory_payoffs[1]
+            result['true_theory'] = true_theory
+            result['belief_strength_range'] = belief_strength_range
+            all_results.append(result)
+    else:
+        # Prepare parameters for parallel processing
+        params = {
+            "agent_class": agent_class,
+            "num_agents": num_agents,
+            "network_type": network_type,
+            "old_theory_payoff": old_theory_payoff,
+            "new_theory_payoffs": new_theory_payoffs,
+            "true_theory": true_theory,
+            "belief_strength_range": belief_strength_range,
+            "max_steps": max_steps,
+            "noise": noise
+        }
         
-        result.update(conv_info)
-        result['num_agents'] = num_agents
-        result['true_probs_old'] = true_probs[0]
-        result['true_probs_new'] = true_probs[1]
-        all_results.append(result)
+        # Parallelisation
+        args_list = [(i, params) for i in range(num_simulations)]
+        num_processes = min(cpu_count(), num_simulations)
+        chunk_size = max(1, num_simulations // (num_processes * 4)) 
+        
+        print(f"\nRunning {num_simulations} simulations using {num_processes} CPU cores (chunk size: {chunk_size})...")
+        
+        # Run simulations in parallel with progress bar
+        with Pool(processes=num_processes) as pool:
+            all_results = list(tqdm(
+                pool.imap(_run_single_simulation, args_list, chunksize=chunk_size),
+                total=num_simulations,
+                desc="Running simulations"
+            ))
     
-    csv_filename = f"{num_agents}agents_{network_type}_{num_simulations}sims.csv"
+    os.makedirs(f"simulation_results/{network_type}", exist_ok=True)
+    csv_filename = f"{network_type}/{num_agents}agents_{agent_class.__name__}_{num_simulations}sims_{belief_strength_range}.csv"
     save_results_as_csv(all_results, csv_filename)
+    
+    return all_results
 
-def plot_belief_evolution(model_history):
-    # Maybe here we can make some function to plot how the beliefs of the agents evolved over time
-    # maybe they go up and down or more linear?
-    pass
-
-def plot_network_statistics(model):
-    #here we can call some function statistics
-    # id say write a seperate class for them but call on them in a nice manner here
-    # this way we can keep the main clean
-    pass
