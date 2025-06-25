@@ -5,6 +5,8 @@ import pandas as pd
 import os
 import numpy as np
 from src.run_model_utils import run_simulations_until_convergence
+from src.super_scientist import SuperScientistAgent
+from src.scientists import ScientistAgent
 
 def run_noise_experiment(
     network_sizes=[2, 4, 6, 8, 10, 12],
@@ -39,7 +41,8 @@ def run_noise_experiment(
                     belief_strength_range=(0.5, 2.0),
                     max_steps=max_steps,
                     noise="on",
-                    noise_std=noise_std
+                    noise_std=noise_std,
+                    agent_class=SuperScientistAgent # Choice: ScientistAgent OR SuperScientistAgent
                 )
 
                 df = pd.DataFrame(sim_results)
@@ -61,9 +64,6 @@ def run_noise_experiment(
                           " runs did not converge!")
                 
     return results
-
-
-
 
 
 def plot_success_vs_noise(
@@ -162,15 +162,15 @@ def save_noise_results_as_csv(results, num_simulations, filename_prefix="noise_r
     # Make sure directory exists
     os.makedirs("analysis_results", exist_ok=True)
 
-    # Construct filename like: noise_results_1000sims.csv
+    # Construct filename
     filename = f"analysis_results/{filename_prefix}_{num_simulations}sims.csv"
     df.to_csv(filename, index=False)
     print(f"\nNoise experiment results saved to {filename}")
 
 
 if __name__ == "__main__":
-    noise_levels = [0.0]
-    network_sizes = [2]
+    noise_levels = [0.0, 0.1, 0.2, 0.3, 0.5, 0.8]
+    network_sizes = [2, 4, 6, 8, 10, 12]
     num_simulations = 1000
 
     results = run_noise_experiment(
