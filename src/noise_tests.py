@@ -66,9 +66,6 @@ def run_noise_experiment(
     return results
 
 
-
-
-
 def plot_success_vs_noise(
         results, save_path="analysis_plots/noise_success_plot.pdf"):
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -172,8 +169,8 @@ def save_noise_results_as_csv(results, num_simulations, filename_prefix="noise_r
 
 
 if __name__ == "__main__":
-    noise_levels = [0.0]
-    network_sizes = [2]
+    noise_levels = [0.0, 0.1, 0.2, 0.3, 0.5, 0.8]
+    network_sizes = [2, 4, 6, 8, 10, 12]
     num_simulations = 1000
 
     results = run_noise_experiment(
