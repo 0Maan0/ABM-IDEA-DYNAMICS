@@ -8,7 +8,7 @@ from src.run_model_utils import run_simulations_until_convergence
 
 def run_noise_experiment(
     network_sizes=[2, 4, 6, 8, 10, 12],
-    noise_levels=[0.0],
+    noise_levels=[0.0, 0.1, 0.2, 0.3],
     num_simulations=1000,
     max_steps=2000
 ):
@@ -38,7 +38,8 @@ def run_noise_experiment(
                     true_theory="new",
                     belief_strength_range=(0.5, 2.0),
                     max_steps=max_steps,
-                    noise=noise_std
+                    noise="on",
+                    noise_std=noise_std
                 )
 
                 df = pd.DataFrame(sim_results)
@@ -62,24 +63,7 @@ def run_noise_experiment(
     return results
 
 
-def save_noise_results_as_csv(results, filename="noise_experiment_results.csv"):
-    """ Saves the results in a csv file. """
-    results_df = []
 
-    for noise, network_data in results.items():
-        for net, data in network_data.items():
-            results_df.append({
-                "noise": noise,
-                "network_type": net,
-                "success_rate": data["success_rate"],
-                "avg_steps": data["avg_steps"]
-            })
-        
-    df = pd.DataFrame(results_df)
-    os.makedirs("analysis_results", exist_ok=True)
-    filepath = f"analysis_results/{filename}"
-    df.to_csv(filepath, index=False)
-    print(f"Numerical results saved to Results saved to {filepath}")
 
 
 def plot_success_vs_noise(
@@ -155,9 +139,38 @@ def plot_success_vs_size_per_network(
         print(f"Plot saved to {save_dir}/success_vs_size_{network_type}.pdf")
 
 
+def save_noise_results_as_csv(results, num_simulations, filename_prefix="noise_results"):
+    """
+    Saves noise experiment results to CSV in a format.
+    Columns: network_type, noise_std, size, success_rate, avg_steps
+    """
+    rows = []
+
+    for network_type, noise_dict in results.items():
+        for noise_std, size_dict in noise_dict.items():
+            for size, metrics in size_dict.items():
+                rows.append({
+                    'network_type': network_type,
+                    'noise_std': noise_std,
+                    'size': size,
+                    'success_rate': metrics['success_rate'],
+                    'avg_steps': metrics['avg_steps']
+                })
+
+    df = pd.DataFrame(rows)
+
+    # Make sure directory exists
+    os.makedirs("analysis_results", exist_ok=True)
+
+    # Construct filename like: noise_results_1000sims.csv
+    filename = f"analysis_results/{filename_prefix}_{num_simulations}sims.csv"
+    df.to_csv(filename, index=False)
+    print(f"\nNoise experiment results saved to {filename}")
+
+
 if __name__ == "__main__":
-    noise_levels = [0.0, 0.2, 0.5, 0.7, 0.9]
-    network_sizes = [2, 4, 6, 8, 10, 12]
+    noise_levels = [0.0]
+    network_sizes = [2]
     num_simulations = 1000
 
     results = run_noise_experiment(
@@ -166,6 +179,8 @@ if __name__ == "__main__":
         num_simulations=num_simulations
     )
 
-    save_noise_results_as_csv(results, filename="...")
+    # This does not 
+    save_noise_results_as_csv(results, num_simulations)
     plot_success_vs_size_per_network(results, 
                                      save_dir="analysis_plots/noise_vs_size")
+    

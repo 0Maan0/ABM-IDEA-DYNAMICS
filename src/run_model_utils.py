@@ -183,7 +183,7 @@ def _run_single_simulation(args):
 def run_simulations_until_convergence(num_simulations=100, num_agents=10, network_type="cycle",
                                      old_theory_payoff=0.5, new_theory_payoffs=(0.4, 0.6),
                                      true_theory="new", belief_strength_range=(0.5, 2.0),
-                                     use_animation=False, max_steps=1000, noise="off", 
+                                     use_animation=False, max_steps=1000, noise="off", noise_std=0.0, 
                                      animation_params=None, show_final_state=False,
                                      agent_class=ScientistAgent):
     """
@@ -211,7 +211,8 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
                 max_steps=max_steps,
                 animation_params=animation_params,
                 show_final_state=show_final_state,
-                noise=noise
+                noise=noise,
+                noise_std=noise_std
             )
             
             result.update(conv_info)
