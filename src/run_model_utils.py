@@ -18,7 +18,7 @@ from tqdm import tqdm
 plt.style.use('seaborn-v0_8-paper')
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
-plt.rc('text', usetex=True)
+plt.rc('text', usetex=False)
 plt.rc('font', family='serif')
 
 colors = sns.color_palette("Set2", 8)
@@ -101,7 +101,8 @@ def create_and_run_model(
     use_animation=False,
     max_steps=1000,
     animation_params=None,
-    show_final_state=False):
+    show_final_state=False,
+    noise="off"):
 
     model = ScienceNetworkModel(
         agent_class=agent_class,  
@@ -110,7 +111,8 @@ def create_and_run_model(
         old_theory_payoff=old_theory_payoff,
         new_theory_payoffs=new_theory_payoffs,
         true_theory=true_theory,
-        belief_strength_range=belief_strength_range
+        belief_strength_range=belief_strength_range,
+        noise=noise
     )
     
     if use_animation:
@@ -152,7 +154,8 @@ def _run_single_simulation(args):
         old_theory_payoff=params['old_theory_payoff'],
         new_theory_payoffs=params['new_theory_payoffs'],
         true_theory=params['true_theory'],
-        belief_strength_range=params['belief_strength_range']
+        belief_strength_range=params['belief_strength_range'],
+        noise=params['noise']
     )
     
     # Run until convergence
@@ -180,7 +183,8 @@ def _run_single_simulation(args):
 def run_simulations_until_convergence(num_simulations=100, num_agents=10, network_type="cycle",
                                      old_theory_payoff=0.5, new_theory_payoffs=(0.4, 0.6),
                                      true_theory="new", belief_strength_range=(0.5, 2.0),
-                                     use_animation=False, max_steps=1000, animation_params=None, show_final_state=False,
+                                     use_animation=False, max_steps=1000, noise="off", 
+                                     animation_params=None, show_final_state=False,
                                      agent_class=ScientistAgent):
     """
     The most important function of this module that you can call on in the main.py to run multiple simulations
@@ -194,7 +198,6 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
             result['simulation_id'] = i + 1
             result['agent_class'] = agent_class.__name__
             result['network_type'] = network_type
-            
             # Create and run the model
             conv_info = create_and_run_model(
                 agent_class=agent_class,  
@@ -207,7 +210,8 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
                 use_animation=use_animation,
                 max_steps=max_steps,
                 animation_params=animation_params,
-                show_final_state=show_final_state
+                show_final_state=show_final_state,
+                noise=noise
             )
             
             result.update(conv_info)
@@ -228,7 +232,8 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
             "new_theory_payoffs": new_theory_payoffs,
             "true_theory": true_theory,
             "belief_strength_range": belief_strength_range,
-            "max_steps": max_steps
+            "max_steps": max_steps,
+            "noise": noise
         }
         
         # Parallelisation

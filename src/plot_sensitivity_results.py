@@ -30,15 +30,13 @@ def load_sensitivity_results(network_type, metric, timestamp=None):
     filepath = os.path.join(results_dir, filename)
     return pd.read_csv(filepath)
 
-def plot_single_analysis(network_type, metric, timestamp=None, save=True):
+def plot_single_analysis(network_type, metric, timestamp=None, save=True, num_trajectories=None):
     """
     Create plots for a single sensitivity analysis result
     """
-
     results_df = load_sensitivity_results(network_type, metric, timestamp)
     results_df = results_df.sort_values('mu_star', ascending=True)
     
-
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     # mu_star
     ax1.barh(range(len(results_df)), results_df['mu_star'], 
@@ -62,14 +60,14 @@ def plot_single_analysis(network_type, metric, timestamp=None, save=True):
     if save:
         save_dir = f"analysis_plots/{network_type}"
         os.makedirs(save_dir, exist_ok=True)
-        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        plt.savefig(f"{save_dir}/{metric}_sensitivity_{current_time}.pdf",
+        traj_str = f"_{num_trajectories}traj" if num_trajectories is not None else ""
+        plt.savefig(f"{save_dir}/{network_type}_{metric}_sensitivity{traj_str}.pdf",
                    format='pdf', bbox_inches='tight')
     
     return fig
 
 def plot_network_comparison(metric, network_types=['cycle', 'wheel', 'complete'], 
-                          timestamp=None, save=True):
+                          timestamp=None, save=True, num_trajectories=None):
     """
     Create comparison plots across different network types
     """
@@ -101,13 +99,13 @@ def plot_network_comparison(metric, network_types=['cycle', 'wheel', 'complete']
     if save:
         save_dir = "analysis_plots/comparison"
         os.makedirs(save_dir, exist_ok=True)
-        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        plt.savefig(f"{save_dir}/{metric}_network_comparison_{current_time}.pdf",
+        traj_str = f"_{num_trajectories}traj" if num_trajectories is not None else ""
+        plt.savefig(f"{save_dir}/network_comparison_{metric}{traj_str}.pdf",
                    format='pdf', bbox_inches='tight')
     
     return fig
 
-def plot_all_metrics(network_type, timestamp=None):
+def plot_all_metrics(network_type, timestamp=None, num_trajectories=None):
     """
     Create plots for all available metrics for a given network type
     """
@@ -115,9 +113,9 @@ def plot_all_metrics(network_type, timestamp=None):
     metrics = set(f.split('_')[0] for f in os.listdir(results_dir))
     
     for metric in metrics:
-        plot_single_analysis(network_type, metric, timestamp)
+        plot_single_analysis(network_type, metric, timestamp, num_trajectories=num_trajectories)
         
-def plot_all_comparisons(timestamp=None):
+def plot_all_comparisons(timestamp=None, num_trajectories=None):
     """
     Create comparison plots for all available metrics across all network types
     """
@@ -135,4 +133,4 @@ def plot_all_comparisons(timestamp=None):
         raise FileNotFoundError("No metrics found in any network directory")
     
     for metric in all_metrics:
-        plot_network_comparison(metric, timestamp=timestamp) 
+        plot_network_comparison(metric, timestamp=timestamp, num_trajectories=num_trajectories) 
