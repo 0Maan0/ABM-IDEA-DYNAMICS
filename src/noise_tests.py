@@ -8,7 +8,7 @@ from src.run_model_utils import run_simulations_until_convergence
 
 def run_noise_experiment(
     network_sizes=[2, 4, 6, 8, 10, 12],
-    noise_levels=[0.0],
+    noise_levels=[0.0, 0.1, 0.2, 0.3],
     num_simulations=1000,
     max_steps=2000
 ):
@@ -38,7 +38,8 @@ def run_noise_experiment(
                     true_theory="new",
                     belief_strength_range=(0.5, 2.0),
                     max_steps=max_steps,
-                    noise=noise_std
+                    noise="on",
+                    noise_std=noise_std
                 )
 
                 df = pd.DataFrame(sim_results)
@@ -166,6 +167,7 @@ if __name__ == "__main__":
         num_simulations=num_simulations
     )
 
-    save_noise_results_as_csv(results, filename="...")
+    # This does not 
+    #save_noise_results_as_csv(results, filename="...")
     plot_success_vs_size_per_network(results, 
                                      save_dir="analysis_plots/noise_vs_size")
