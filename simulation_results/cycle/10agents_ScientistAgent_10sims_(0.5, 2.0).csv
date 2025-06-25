@@ -1,0 +1,11 @@
+simulation_id,agent_class,network_type,num_agents,old_theory_payoff,new_theory_payoff_if_old_true,new_theory_payoff_if_new_true,true_theory,belief_strength_range,converged,step,theory
+1,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,102,Correct Theory
+2,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,89,Correct Theory
+3,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,181,Correct Theory
+4,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,502,Correct Theory
+5,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,132,Correct Theory
+6,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,100,Correct Theory
+7,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,76,Correct Theory
+8,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,130,Correct Theory
+9,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,98,Correct Theory
+10,ScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,68,Correct Theory

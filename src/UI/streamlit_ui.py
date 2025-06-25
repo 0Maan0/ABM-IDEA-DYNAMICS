@@ -15,6 +15,8 @@ from src.run_sensitivity_tools import run_full_sensitivity_analysis
 from src.plot_sensitivity_results import plot_all_metrics, plot_all_comparisons
 import plotly.graph_objects as go
 import base64
+from streamlit_elements import elements, mui
+import json
 
 def create_network_visualization(G, height=400):
     """Create an interactive network visualization"""
@@ -26,7 +28,7 @@ def create_network_visualization(G, height=400):
     
     # Add nodes and edges
     for node in G_copy.nodes():
-        net.add_node(node, label=f"Agent {node}")
+        net.add_node(node, label=f"Scientist {node+1}")
     for edge in G_copy.edges():
         net.add_edge(edge[0], edge[1])
     
@@ -37,36 +39,47 @@ def create_network_visualization(G, height=400):
             components.html(f.read(), height=height)
 
 def custom_network_creator(num_agents):
-    """Create a custom network using an adjacency matrix"""
+    """Create a custom network using adjacency matrix"""
     st.subheader("Custom Network Creator")
     
-    # Initialize or get the adjacency matrix from session state
-    if 'adj_matrix' not in st.session_state or \
-       st.session_state.adj_matrix.shape[0] != num_agents:
-        st.session_state.adj_matrix = np.zeros((num_agents, num_agents))
+    # Create an empty adjacency matrix with boolean values
+    adj_matrix = np.zeros((num_agents, num_agents), dtype=bool)
     
-    # Create a DataFrame for the adjacency matrix
+    # Create a DataFrame for the adjacency matrix with labeled rows and columns
     df = pd.DataFrame(
-        st.session_state.adj_matrix,
-        columns=[f"Agent {i}" for i in range(num_agents)],
-        index=[f"Agent {i}" for i in range(num_agents)]
+        adj_matrix,
+        columns=[f"Scientist {i+1}" for i in range(num_agents)],
+        index=[f"Scientist {i+1}" for i in range(num_agents)]
     )
     
-    # Display the adjacency matrix as an editable table
-    st.write("Adjacency Matrix (1 for connection, 0 for no connection):")
-    edited_df = st.data_editor(df)
+    # Create a mask for diagonal elements
+    for i in range(num_agents):
+        df.iloc[i, i] = None  # Set diagonal to None to make it uneditable
     
-    # Update the adjacency matrix in session state
-    st.session_state.adj_matrix = edited_df.values
+    # Display the editable adjacency matrix
+    st.write("Click cells to connect/disconnect scientists:")
+    edited_df = st.data_editor(
+        df,
+        disabled=["index"],  # Disable editing of row labels
+        column_config={
+            col: st.column_config.CheckboxColumn(col, default=False)
+            for col in df.columns
+        },
+        use_container_width=True
+    )
     
-    # Create network from adjacency matrix
-    G = nx.from_numpy_array(st.session_state.adj_matrix)
+    # Convert back to numpy array and to float for NetworkX
+    # Replace any None values with 0 before conversion
+    adj_matrix = edited_df.fillna(0).values.astype(float)
     
-    # Visualize the network
+    # Create NetworkX graph from adjacency matrix
+    G = nx.from_numpy_array(adj_matrix)
+    
+    # Display the network
     st.write("Network Preview:")
     create_network_visualization(G)
     
-    return G if not st.session_state.adj_matrix.size == 0 else None
+    return G
 
 def main():
     st.set_page_config(page_title="Opinion Dynamics Model", layout="wide")
@@ -78,40 +91,89 @@ def main():
         
         # Network Parameters
         st.subheader("Network Parameters")
-        num_agents = st.number_input("Number of Agents", min_value=2, max_value=100, value=10)
+        num_agents = st.number_input("Number of Scientists", min_value=2, max_value=100, value=10)
         network_type = st.selectbox(
             "Network Type",
-            ["cycle", "wheel", "complete", "custom"]
+            ["cycle", "wheel", "complete", "custom"],
+            index=0
         )
         
         # Theory Parameters
         st.subheader("Theory Parameters")
-        old_theory_payoff = st.slider("Old Theory Payoff", 0.0, 1.0, 0.5)
-        new_theory_payoff_low = st.slider("New Theory Payoff (Old True)", 0.0, 1.0, 0.4)
-        new_theory_payoff_high = st.slider("New Theory Payoff (New True)", 0.0, 1.0, 0.6)
-        true_theory = st.selectbox("True Theory", ["old", "new"], index=1)
+        old_theory_payoff = st.number_input(
+            "Old Theory Payoff",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            step=0.1
+        )
+        new_theory_payoff_low = st.number_input(
+            "New Theory Payoff (Old True)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.4,
+            step=0.1
+        )
+        new_theory_payoff_high = st.number_input(
+            "New Theory Payoff (New True)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.6,
+            step=0.1
+        )
+        true_theory = st.selectbox(
+            "True Theory",
+            ["old", "new"],
+            index=1
+        )
         
-        belief_strength_min = st.slider("Belief Strength (Min)", 0.0, 10.0, 0.5)
-        belief_strength_max = st.slider("Belief Strength (Max)", 0.0, 10.0, 2.0)
+        belief_strength_low = st.number_input(
+            "Belief Strength (Min)",
+            min_value=0.0,
+            max_value=10.0,
+            value=0.5,
+            step=0.1
+        )
+        belief_strength_high = st.number_input(
+            "Belief Strength (Max)",
+            min_value=0.0,
+            max_value=10.0,
+            value=2.0,
+            step=0.1
+        )
         
         # Simulation Parameters
         st.subheader("Simulation Parameters")
-        num_simulations = st.number_input("Number of Simulations", 1, 10000, 2000)
-        use_animation = st.checkbox("Show Animation")
-        max_steps = st.number_input("Maximum Steps", 1, 10000, 1000)
+        num_simulations = st.number_input(
+            "Number of Simulations",
+            min_value=1,
+            max_value=10000,
+            value=2000
+        )
+        
+        show_final_state = st.checkbox("Show Final State")
+        use_animation = st.checkbox("Use Animation")
+        
+        max_steps = st.number_input(
+            "Maximum Steps",
+            min_value=1,
+            max_value=10000,
+            value=1000
+        )
         
         # Analysis Options
         st.subheader("Analysis Options")
-        run_regular = st.checkbox("Run Regular Simulations", True)
+        run_regular = st.checkbox("Run Regular Simulations", value=True)
         run_sensitivity = st.checkbox("Run Sensitivity Analysis")
         
-        # Only show these options if sensitivity analysis is selected
         if run_sensitivity:
-            create_plots = st.checkbox("Create Analysis Plots", True)
-            num_trajectories = st.number_input("Number of Trajectories", 1, 5000, 715)
-        else:
-            create_plots = False
-            num_trajectories = 715  
+            create_plots = st.checkbox("Create Plots", value=True)
+            num_trajectories = st.number_input(
+                "Number of Trajectories",
+                min_value=1,
+                max_value=5000,
+                value=715
+            )
 
     # Main area
     custom_network = None
@@ -141,7 +203,7 @@ def main():
                 'old_theory_payoff': old_theory_payoff,
                 'new_theory_payoffs': (new_theory_payoff_low, new_theory_payoff_high),
                 'true_theory': true_theory,
-                'belief_strength_range': (belief_strength_min, belief_strength_max),
+                'belief_strength_range': (belief_strength_low, belief_strength_high),
                 'use_animation': use_animation,
                 'max_steps': max_steps,
                 'animation_params': {
@@ -149,6 +211,8 @@ def main():
                     'interval': 500,
                     'steps_per_frame': 1
                 },
+                'show_final_state': show_final_state,
+                'custom_network': custom_network
             }
             
             if run_regular:
