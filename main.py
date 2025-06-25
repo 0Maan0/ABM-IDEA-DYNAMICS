@@ -7,6 +7,8 @@ from src.plot_sensitivity_results import (
     plot_all_metrics,
     plot_all_comparisons
 )
+from src.super_scientist import SuperScientistAgent
+from src.scientists import ScientistAgent
 
 if __name__ == "__main__":
     # Model parameters
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     # Choose what code to run
     run_regular_simulations = True #True  
     run_sensitivity_analysis = False #True
-    create_sensitivity_plots = True
+    create_sensitivity_plots = False #True
     
     # Sensitivity analysis parameters
     num_trajectories = 715  # Will generate about 715 * 7 = 5005 parameter combinations (we should do 5k)
@@ -45,6 +47,7 @@ if __name__ == "__main__":
         print("\n=== Running Regular Simulations ===")
         # Run the simulations with the above chosen parameters
         run_simulations_until_convergence(
+            agent_class= SuperScientistAgent,
             num_simulations=num_simulations,
             num_agents=num_agents,
             network_type=network_type,
