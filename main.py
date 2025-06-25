@@ -7,8 +7,6 @@ from src.plot_sensitivity_results import (
     plot_all_metrics,
     plot_all_comparisons
 )
-from src.scientists import ScientistAgent
-from src.influential_scientists import SuperScientistAgent
 
 if __name__ == "__main__":
     # Model parameters
@@ -27,7 +25,7 @@ if __name__ == "__main__":
     
     # Parameters for the animation 
     # Runs until convergence but here you can say if you want to use animation or not
-    use_animation = False
+    use_animation = False # if true it will show the proces of one simulation
     max_steps = 1000   
     animation_params = {
         'num_frames': 30,
@@ -36,9 +34,9 @@ if __name__ == "__main__":
     }
     
     # Choose what code to run
-    run_regular_simulations = True  
-    run_sensitivity = False #True
-    create_plots = True
+    run_regular_simulations = True #True  
+    run_sensitivity_analysis = False #True
+    create_sensitivity_plots = True
     
     # Sensitivity analysis parameters
     num_trajectories = 715  # Will generate about 715 * 7 = 5005 parameter combinations (we should do 5k)
@@ -47,7 +45,6 @@ if __name__ == "__main__":
         print("\n=== Running Regular Simulations ===")
         # Run the simulations with the above chosen parameters
         run_simulations_until_convergence(
-            agent_class=SuperScientistAgent,  # Choice: ScientistAgent or SuperScientistAgent
             num_simulations=num_simulations,
             num_agents=num_agents,
             network_type=network_type,
@@ -61,7 +58,7 @@ if __name__ == "__main__":
             show_final_state=show_final_state
         )
     
-    if run_sensitivity:
+    if run_sensitivity_analysis:
         print("\n=== Running Sensitivity Analysis ===")
         # Run sensitivity analysis
         run_full_sensitivity_analysis(
@@ -70,7 +67,7 @@ if __name__ == "__main__":
             run_comparison=True   # Run comparison across network types
         )
         
-    if create_plots:
+    if create_sensitivity_plots:
         print("\n=== Creating Sensitivity Analysis Plots ===")
         # Create plots for each network type
         for net_type in ['cycle', 'wheel', 'complete']:

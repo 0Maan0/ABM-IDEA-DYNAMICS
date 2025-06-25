@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 from src.run_model_utils import run_simulations_until_convergence
 from src.scientists import ScientistAgent
-from src.influential_scientists import SuperScientistAgent
+from super_scientist import SuperScientistAgent
 
 plt.style.use('seaborn-v0_8-paper')
 plt.rcParams['pdf.fonttype'] = 42

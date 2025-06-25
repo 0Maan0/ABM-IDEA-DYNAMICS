@@ -62,8 +62,13 @@ class ScienceNetworkModel(Model):
             return nx.wheel_graph(self.num_agents)
         elif network_type == "complete":
             return nx.complete_graph(self.num_agents)
+        elif isinstance(network_type, nx.Graph):
+            # Custom network
+            if network_type.number_of_nodes() != self.num_agents:
+                raise ValueError("Custom network must have the same number of nodes as num_agents")
+            return network_type
         else:
-            raise ValueError("Unknown network type")
+            raise ValueError("Unknown network type or invalid custom network")
 
     def get_action_payoff(self, theory_choice):
         """Get the payoff for a given theory choice"""
