@@ -10,6 +10,9 @@ class ScienceNetworkModel(Model):
     The main model for simulating the spread of a new scientific theory in a network.
     For now you can choose between a cycle, wheel and complete network.
     """
+    # Define network constants
+    # network_types = ["cycle", "wheel", "complete", "cave", "tree", "custom"]
+
     def __init__(
         self,
         agent_class=ScientistAgent,  # Default to regular ScientistAgent
@@ -52,6 +55,10 @@ class ScienceNetworkModel(Model):
             return nx.wheel_graph(self.num_agents)
         elif network_type == "complete":
             return nx.complete_graph(self.num_agents)
+        elif network_type == "cave":
+            return nx.relaxed_caveman_graph(self.num_agents)
+        elif network_type == "tree":
+            return nx.balanced_tree(self.num_agents)
         elif isinstance(network_type, nx.Graph):
             # Custom network
             if network_type.number_of_nodes() != self.num_agents:
