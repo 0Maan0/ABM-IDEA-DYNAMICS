@@ -3,6 +3,7 @@ from mesa.time import SimultaneousActivation
 import networkx as nx
 import random
 from src.scientists import ScientistAgent
+from src.influential_scientists import SuperScientistAgent
 import numpy as np
 
 class ScienceNetworkModel(Model):
@@ -21,13 +22,14 @@ class ScienceNetworkModel(Model):
         belief_strength_range=(0.5, 2.0),
         noise="off",
         noise_loc=0.0,
-        noise_std=0.5
+        noise_std=0.5,
+        h_index=0.0 
     ):
         super().__init__()
         self.num_agents = num_agents
         self.network_type = network_type
         self.old_theory_payoff = old_theory_payoff
-        self.new_theory_payoffs = new_theory_payoffs
+        self.new_theory_payoffs = new_theory_payoffs    
         self.true_theory = true_theory
         self.belief_strength_range = belief_strength_range
         self.schedule = SimultaneousActivation(self)
@@ -42,6 +44,8 @@ class ScienceNetworkModel(Model):
         
         # Start scientists with random beliefs about which theory is true
         # TODO: make different initial conditions for this?
+        
+        # Create agents with initial beliefs and belief strength
         for i in range(num_agents):
             # Initial belief that new theory is true
             initial_belief = random.random()  # Uniform between 0 and 1
@@ -49,9 +53,17 @@ class ScienceNetworkModel(Model):
             # Make a random belief strength within the range to determine resistance to change
             belief_strength = random.uniform(*belief_strength_range)
             
-            agent = self.agent_class(i, self, 
-                                 initial_belief=initial_belief,
-                                 belief_strength=belief_strength)
+            if self.agent_class == SuperScientistAgent:
+                # Set h_index value - could be fixed or random
+                h_index_value = random.uniform(0.0, 1.0)
+                agent = self.agent_class(i, self, 
+                                        initial_belief=initial_belief,
+                                        belief_strength=belief_strength,
+                                        h_index=h_index_value)
+            else:
+                agent = self.agent_class(i, self, 
+                                        initial_belief=initial_belief,
+                                        belief_strength=belief_strength)
             self.schedule.add(agent)
 
     def _create_network(self, network_type):
