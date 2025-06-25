@@ -163,7 +163,7 @@ def plot_zollman_figures(num_simulations, agent_class=ScientistAgent, save_dir="
 if __name__ == "__main__":
     num_simulations = 10000  # Set number of simulations
     run_again = True  # Set to False if you just want to plot
-    agent_class = SuperScientistAgent  # Choose between ScientistAgent or SuperScientistAgent
+    agent_class = ScientistAgent  # Choose between ScientistAgent or SuperScientistAgent
     results_file = f"analysis_results/zollman_results_{agent_class.__name__}_{num_simulations}sims"
     if run_again:
         print("=== Running Zollman's (2011) experiment ===")

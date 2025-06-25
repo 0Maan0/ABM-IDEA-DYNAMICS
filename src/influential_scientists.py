@@ -87,7 +87,7 @@ class SuperScientistAgent(Agent):
 
         return "new" if new_theory_prob > old_theory_prob else "old"
 
-    def update_belief(self, success, weight=1.0):
+    def update_belief(self, success, theory ,weight=1.0):
         """
         Bayesian update based on experimental result
         """
@@ -98,13 +98,22 @@ class SuperScientistAgent(Agent):
         # Current belief
         prior = self.belief_in_new_theory
 
-        # Calculate likelihood based on success/failure
-        if success:
-            p_result_if_new = p_success_if_new
-            p_result_if_old = p_success_if_old
-        else:
-            p_result_if_new = 1 - p_success_if_new
-            p_result_if_old = 1 - p_success_if_old
+        if theory == "new":
+            # If testing new theory:
+            if success:
+                p_result_if_new = p_success_if_new
+                p_result_if_old = p_success_if_old
+            else:
+                p_result_if_new = 1 - p_success_if_new
+                p_result_if_old = 1 - p_success_if_old
+        else:  # theory == "old"
+            # If testing old theory
+            if success:
+                p_result_if_new = p_success_if_old  # Probability of old theory success if new theory is worse
+                p_result_if_old = p_success_if_new  # Probability of old theory success if new theory is better
+            else:
+                p_result_if_new = 1 - p_success_if_old
+                p_result_if_old = 1 - p_success_if_new
 
         # Apply H-index weighting to the evidence
         # weight=1 means maximum influence, 0.5 means neutral, 0 means lowered

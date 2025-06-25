@@ -63,9 +63,9 @@ class ScientistAgent(Agent):
         
         return "new" if new_theory_prob > old_theory_prob else "old"
 
-    def update_belief(self, success):
+    def update_belief(self, success, theory):
         """
-        Bayesian update based on experimental result
+        Bayesian update based on experimental result and which theory was tested
         """
         # Get probabilities for each theory
         p_success_if_new = self.model.new_theory_payoffs[1]
@@ -74,13 +74,23 @@ class ScientistAgent(Agent):
         # Current belief
         prior = self.belief_in_new_theory
         
-        # Calculate likelihood based on success/failure
-        if success:
-            p_result_if_new = p_success_if_new
-            p_result_if_old = p_success_if_old
-        else:
-            p_result_if_new = 1 - p_success_if_new
-            p_result_if_old = 1 - p_success_if_old
+        # Calculate likelihood based on success/failure and which theory was tested
+        if theory == "new":
+            # If testing new theory:
+            if success:
+                p_result_if_new = p_success_if_new
+                p_result_if_old = p_success_if_old
+            else:
+                p_result_if_new = 1 - p_success_if_new
+                p_result_if_old = 1 - p_success_if_old
+        else:  # theory == "old"
+            # If testing old theory
+            if success:
+                p_result_if_new = p_success_if_old  # Probability of old theory success if new theory is worse
+                p_result_if_old = p_success_if_new  # Probability of old theory success if new theory is better
+            else:
+                p_result_if_new = 1 - p_success_if_old
+                p_result_if_old = 1 - p_success_if_new
         
         # Direct Bayes update as in Zollman's paper
         numerator = p_result_if_new * prior
@@ -88,7 +98,6 @@ class ScientistAgent(Agent):
         
         # Update belief directly
         self.belief_in_new_theory = numerator / denominator
-        
 
     def incorporate_neighbor_evidence(self, neighbor):
         """Learn from neighbor's current round experimental results only"""
