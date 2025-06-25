@@ -44,7 +44,7 @@ def ellips_scaling(x, p):
     return ellnorm(x, a) if p < 0 else ellinv(x, a)
 
 
-class ScientistAgent(Agent):
+class SuperScientistAgent(Agent):
     """
     An agent representing a scientist in Zollman's (2007) model
     (https://www.researchgate.net/publication/228973111_The_Communication_Structure_of_Epistemic_Communities).
@@ -87,7 +87,7 @@ class ScientistAgent(Agent):
 
         return "new" if new_theory_prob > old_theory_prob else "old"
 
-    def update_belief(self, success, theory_choice, weight=1.0):
+    def update_belief(self, success, weight=1.0):
         """
         Bayesian update based on experimental result
         """
@@ -109,8 +109,8 @@ class ScientistAgent(Agent):
         # Apply H-index weighting to the evidence
         # weight=1 means maximum influence, 0.5 means neutral, 0 means lowered
         # influence
-        weighted_p_result_if_new = ellips_scaling(p_result_if_new, weight)
-        weighted_p_result_if_old = ellips_scaling(p_result_if_old, weight)
+        weighted_p_result_if_new = ellips_scaling(float(p_result_if_new), weight)
+        weighted_p_result_if_old = ellips_scaling(float(p_result_if_old), weight)
 
         # Direct Bayes update as in Zollman's paper
         numerator = weighted_p_result_if_new * prior
@@ -128,9 +128,9 @@ class ScientistAgent(Agent):
 
         # Update based on neighbor's current round results only
         if neighbor.current_old_theory_result is not None:
-            self.update_belief(neighbor.current_old_theory_result, "old",weight=influence_weight)
+            self.update_belief(neighbor.current_old_theory_result, weight=influence_weight)
         if neighbor.current_new_theory_result is not None:
-            self.update_belief(neighbor.current_new_theory_result, "new",weight=influence_weight)
+            self.update_belief(neighbor.current_new_theory_result, weight=influence_weight)
 
     def calculate_influence_weight(self, neighbor_h_index, method="probit"):
         """
@@ -193,7 +193,7 @@ class ScientistAgent(Agent):
             self.current_new_theory_result = success
 
         # Update based on own result
-        self.update_belief(success, self.current_choice)
+        self.update_belief(success, weight=1.0)
 
         # Learn from neighbors' current round results only
         neighbors = self.model.network.neighbors(self.unique_id)

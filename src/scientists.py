@@ -56,7 +56,7 @@ class ScientistAgent(Agent):
         
         return "new" if new_theory_prob > old_theory_prob else "old"
 
-    def update_belief(self, success, theory_choice):
+    def update_belief(self, success):
         """
         Bayesian update based on experimental result
         """
@@ -81,6 +81,7 @@ class ScientistAgent(Agent):
         
         # Update belief directly
         self.belief_in_new_theory = numerator / denominator
+        
 
     def incorporate_neighbor_evidence(self, neighbor):
         """Learn from neighbor's current round experimental results only"""

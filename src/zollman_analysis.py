@@ -8,6 +8,8 @@ import pandas as pd
 import os
 from datetime import datetime
 from src.run_model_utils import run_simulations_until_convergence
+from src.scientists import ScientistAgent
+from src.influential_scientists import SuperScientistAgent
 
 plt.style.use('seaborn-v0_8-paper')
 plt.rcParams['pdf.fonttype'] = 42
@@ -15,7 +17,7 @@ plt.rcParams['ps.fonttype'] = 42
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
-def run_zollman_experiment(network_sizes=[2, 4, 6, 8, 10, 12], num_simulations=10000):
+def run_zollman_experiment(agent_class = ScientistAgent, network_sizes=[2, 4, 6, 8, 10, 12], num_simulations=10000):
     """
     Runs the experiment from Zollman's paper with the same parameters.
     Returns results for plotting Figures 2 and 3.
@@ -31,6 +33,7 @@ def run_zollman_experiment(network_sizes=[2, 4, 6, 8, 10, 12], num_simulations=1
             
             # Run simulations with Zollman's parameters
             sim_results = run_simulations_until_convergence(
+                agent_class=agent_class, 
                 num_simulations=num_simulations,
                 num_agents=size,
                 network_type=network_type,
@@ -71,16 +74,16 @@ def run_zollman_experiment(network_sizes=[2, 4, 6, 8, 10, 12], num_simulations=1
     ])
     
     os.makedirs("analysis_results", exist_ok=True)
-    results_df.to_csv(f"analysis_results/zollman_results_{num_simulations}sims.csv", index=False)
-    print(f"\nNumerical results saved to analysis_results/zollman_results_{num_simulations}sims.csv")
+    results_df.to_csv(f"analysis_results/zollman_results_{agent_class.__name__}_{num_simulations}sims.csv", index=False)
+    print(f"\nNumerical results saved to analysis_results/zollman_results_{agent_class.__name__}_{num_simulations}sims.csv")
     
     return results
 
-def load_results(num_simulations):
+def load_results(num_simulations, agent_class=ScientistAgent):
     """
     Load results from saved CSV file.
     """
-    filepath = f"analysis_results/zollman_results_{num_simulations}sims.csv"
+    filepath = f"analysis_results/zollman_results_{agent_class.__name__}_{num_simulations}sims.csv"
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Results file not found: {filepath}")
     
@@ -99,13 +102,13 @@ def load_results(num_simulations):
     
     return results
 
-def plot_zollman_figures(num_simulations, save_dir="analysis_plots"):
+def plot_zollman_figures(num_simulations, agent_class=ScientistAgent, save_dir="analysis_plots"):
     """
     Recreates Figures 2 and 3 from Zollman's paper with the same styling.
     Reads data from saved results file.
     """
     # Load results from file
-    results = load_results(num_simulations)
+    results = load_results(num_simulations, agent_class)
     
     sizes = sorted(results.keys())
     network_types = ['cycle', 'wheel', 'complete']
@@ -131,7 +134,7 @@ def plot_zollman_figures(num_simulations, save_dir="analysis_plots"):
     plt.ylim(0.6, 1.0)
     
     os.makedirs(save_dir, exist_ok=True)
-    plt.savefig(f"{save_dir}/learning_results_{num_simulations}sims.pdf", 
+    plt.savefig(f"{save_dir}/learning_results_{agent_class.__name__}_{num_simulations}sims.pdf", 
                 format='pdf', bbox_inches='tight')
     
     # Figure 3: Speed Results
@@ -152,7 +155,7 @@ def plot_zollman_figures(num_simulations, save_dir="analysis_plots"):
     plt.xlim(2, 12)
     plt.ylim(0, 1200)
     
-    plt.savefig(f"{save_dir}/speed_results_{num_simulations}sims.pdf", 
+    plt.savefig(f"{save_dir}/speed_results_{agent_class.__name__}_{num_simulations}sims.pdf", 
                 format='pdf', bbox_inches='tight')
     
     print(f"\nPlots saved to {save_dir}/")
@@ -160,14 +163,15 @@ def plot_zollman_figures(num_simulations, save_dir="analysis_plots"):
 if __name__ == "__main__":
     num_simulations = 10000  # Set number of simulations
     run_again = True  # Set to False if you just want to plot
-
-    results_file = f"analysis_results/zollman_results_{num_simulations}sims.csv"
+    agent_class = SuperScientistAgent  # Choose between ScientistAgent or SuperScientistAgent
+    results_file = f"analysis_results/zollman_results_{agent_class.__name__}_{num_simulations}sims"
     if run_again:
         print("=== Running Zollman's (2011) experiment ===")
         run_zollman_experiment(
+            agent_class=agent_class,  
             network_sizes=[2, 4, 6, 8, 10, 12],
             num_simulations=num_simulations
         )
     
     print("\n=== Creating plots ===")
-    plot_zollman_figures(num_simulations) 
+    plot_zollman_figures(num_simulations, agent_class=agent_class) 
