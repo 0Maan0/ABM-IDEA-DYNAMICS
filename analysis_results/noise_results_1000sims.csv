@@ -1,0 +1,4 @@
+network_type,noise_std,size,success_rate,avg_steps
+cycle,0.0,2,0.052,44.90384615384615
+wheel,0.0,2,0.058,40.327586206896555
+complete,0.0,2,0.046,48.06521739130435
