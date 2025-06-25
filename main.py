@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # Model parameters
     num_agents = 10  # Number of scientists in the network
     network_type = "cycle"  # Options: 'cycle', 'wheel', 'complete'
-    agent_class = SuperScientistAgent  # Choose the agent type (SuperScientistAgent or ScientistAgent)
+    agent_class = ScientistAgent  # Choose the agent type (SuperScientistAgent or ScientistAgent)
     # Theory payoff parameters
     old_theory_payoff = 0.5  # Payoff for working with the old theory
     new_theory_payoffs = (0.4, 0.6)  # Payoffs for working with the new theory when either (old theory true, new theory true)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     
     # Parameters for the animation 
     # Runs until convergence but here you can say if you want to use animation or not
-    use_animation = False # if true it will show the proces of one simulation
+    use_animation = True # if true it will show the proces of one simulation
     max_steps = 1000   
     animation_params = {
         'num_frames': 30,

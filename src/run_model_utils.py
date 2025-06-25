@@ -102,7 +102,9 @@ def create_and_run_model(
     max_steps=1000,
     animation_params=None,
     show_final_state=False,
-    noise="off"):
+    noise="off",
+    noise_std=0.0):
+
 
     model = ScienceNetworkModel(
         agent_class=agent_class,  
@@ -112,7 +114,8 @@ def create_and_run_model(
         new_theory_payoffs=new_theory_payoffs,
         true_theory=true_theory,
         belief_strength_range=belief_strength_range,
-        noise=noise
+        noise=noise, 
+        noise_std=noise_std   
     )
     
     if use_animation:
