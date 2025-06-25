@@ -7,6 +7,8 @@ from src.plot_sensitivity_results import (
     plot_all_metrics,
     plot_all_comparisons
 )
+from src.scientists import ScientistAgent
+from src.influential_scientists import SuperScientistAgent
 
 if __name__ == "__main__":
     # Model parameters
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     }
     
     # Choose what code to run
-    run_regular_simulations = True #True  
+    run_regular_simulations = True  
     run_sensitivity = False #True
     create_plots = True
     
@@ -45,6 +47,7 @@ if __name__ == "__main__":
         print("\n=== Running Regular Simulations ===")
         # Run the simulations with the above chosen parameters
         run_simulations_until_convergence(
+            agent_class=SuperScientistAgent,  # Choice: ScientistAgent or SuperScientistAgent
             num_simulations=num_simulations,
             num_agents=num_agents,
             network_type=network_type,

@@ -8,6 +8,7 @@ import seaborn as sns
 import numpy as np
 import networkx as nx
 from src.network import ScienceNetworkModel
+from src.scientists import ScientistAgent
 import pandas as pd
 import os
 from datetime import datetime
@@ -90,6 +91,7 @@ def show_final_state(model):
     animate_model(model, num_frames=1, interval=1000, steps_per_frame=1)
 
 def create_and_run_model(
+    agent_class=ScientistAgent,  # Choice: ScientistAgent or SuperScientistAgent
     num_agents=10, 
     network_type="cycle",
     old_theory_payoff=0.5, 
@@ -103,6 +105,7 @@ def create_and_run_model(
     noise="off"):
 
     model = ScienceNetworkModel(
+        agent_class=agent_class,  
         num_agents=num_agents,
         network_type=network_type,
         old_theory_payoff=old_theory_payoff,
@@ -145,6 +148,7 @@ def _run_single_simulation(args):
     
     # Create and run the model
     model = ScienceNetworkModel(
+        agent_class=params['agent_class'],
         num_agents=params['num_agents'],
         network_type=params['network_type'],
         old_theory_payoff=params['old_theory_payoff'],
@@ -163,6 +167,7 @@ def _run_single_simulation(args):
     # Add simulation data
     result = {
         'simulation_id': sim_id + 1,
+        'agent_class': params['agent_class'].__name__,
         'network_type': params['network_type'],
         'num_agents': params['num_agents'],
         'old_theory_payoff': params['old_theory_payoff'],
@@ -179,7 +184,8 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
                                      old_theory_payoff=0.5, new_theory_payoffs=(0.4, 0.6),
                                      true_theory="new", belief_strength_range=(0.5, 2.0),
                                      use_animation=False, max_steps=1000, noise="off", 
-                                     animation_params=None, show_final_state=False):
+                                     animation_params=None, show_final_state=False,
+                                     agent_class=ScientistAgent):
     """
     The most important function of this module that you can call on in the main.py to run multiple simulations
     """
@@ -190,9 +196,11 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
             print(f"==> Running simulation {i + 1} with {num_agents} agents on a {network_type} network :) <==\n")
             result = {}
             result['simulation_id'] = i + 1
+            result['agent_class'] = agent_class.__name__
             result['network_type'] = network_type
             # Create and run the model
             conv_info = create_and_run_model(
+                agent_class=agent_class,  
                 num_agents=num_agents,
                 network_type=network_type,
                 old_theory_payoff=old_theory_payoff,
@@ -217,6 +225,7 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
     else:
         # Prepare parameters for parallel processing
         params = {
+            "agent_class": agent_class,
             "num_agents": num_agents,
             "network_type": network_type,
             "old_theory_payoff": old_theory_payoff,
@@ -243,7 +252,7 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
             ))
     
     os.makedirs(f"simulation_results/{network_type}", exist_ok=True)
-    csv_filename = f"{network_type}/{num_agents}agents_{num_simulations}sims_{belief_strength_range}.csv"
+    csv_filename = f"{network_type}/{num_agents}agents_{agent_class.__name__}_{num_simulations}sims_{belief_strength_range}.csv"
     save_results_as_csv(all_results, csv_filename)
     
     return all_results

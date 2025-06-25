@@ -11,7 +11,8 @@ class ScienceNetworkModel(Model):
     For now you can choose between a cycle, wheel and complete network.
     """
     def __init__(
-        self,
+        self, 
+        agent_class=ScientistAgent,  # Default to regular ScientistAgent
         num_agents=10,
         network_type="complete",
         old_theory_payoff=0.5,  # Payoff for believing the old theory
@@ -33,6 +34,8 @@ class ScienceNetworkModel(Model):
         self.network = self._create_network(network_type)
         self.step_count = 0
         self.converged = False
+        self.influence_scaling = "probit"
+        self.agent_class = agent_class  # Allow for different agent types (e.g., ScientistAgent or SuperScientistAgent)
         self.noise_active = noise
         self.noise_loc = noise_loc
         self.noise_std = noise_std
@@ -46,7 +49,7 @@ class ScienceNetworkModel(Model):
             # Make a random belief strength within the range to determine resistance to change
             belief_strength = random.uniform(*belief_strength_range)
             
-            agent = ScientistAgent(i, self, 
+            agent = self.agent_class(i, self, 
                                  initial_belief=initial_belief,
                                  belief_strength=belief_strength)
             self.schedule.add(agent)
