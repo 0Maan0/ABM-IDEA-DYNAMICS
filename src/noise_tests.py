@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import numpy as np
 from src.run_model_utils import run_simulations_until_convergence
+from src.super_scientist import SuperScientistAgent
 
 def run_noise_experiment(
     network_sizes=[2, 4, 6, 8, 10, 12],
@@ -39,7 +40,8 @@ def run_noise_experiment(
                     belief_strength_range=(0.5, 2.0),
                     max_steps=max_steps,
                     noise="on",
-                    noise_std=noise_std
+                    noise_std=noise_std,
+                    agent_class=SuperScientistAgent
                 )
 
                 df = pd.DataFrame(sim_results)

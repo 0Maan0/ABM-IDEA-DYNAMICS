@@ -137,9 +137,9 @@ class SuperScientistAgent(Agent):
 
         # Update based on neighbor's current round results only
         if neighbor.current_old_theory_result is not None:
-            self.update_belief(neighbor.current_old_theory_result, weight=influence_weight)
+            self.update_belief(neighbor.current_old_theory_result, "old", weight=influence_weight)
         if neighbor.current_new_theory_result is not None:
-            self.update_belief(neighbor.current_new_theory_result, weight=influence_weight)
+            self.update_belief(neighbor.current_new_theory_result, "new", weight=influence_weight)
 
     def calculate_influence_weight(self, neighbor_h_index, method="probit"):
         """
@@ -202,7 +202,7 @@ class SuperScientistAgent(Agent):
             self.current_new_theory_result = success
 
         # Update based on own result
-        self.update_belief(success, weight=1.0)
+        self.update_belief(success, self.current_choice, weight=1.0)
 
         # Learn from neighbors' current round results only
         neighbors = self.model.network.neighbors(self.unique_id)
