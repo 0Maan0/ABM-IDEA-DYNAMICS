@@ -134,7 +134,6 @@ class SuperScientistAgent(Agent):
         # Update belief directly
         if denominator > 0:
             self.belief_in_new_theory = numerator / denominator
-            self.belief_in_old_theory = 1 - self.belief_in_new_theory
 
     def incorporate_neighbor_evidence(self, neighbor):
         """Learn from neighbor's current round experimental results only"""
