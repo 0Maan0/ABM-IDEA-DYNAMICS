@@ -102,7 +102,9 @@ def create_and_run_model(
     max_steps=1000,
     animation_params=None,
     show_final_state=False,
-    noise="off"):
+    noise="off",
+    noise_std=0.0):
+
 
     model = ScienceNetworkModel(
         agent_class=agent_class,  
@@ -112,7 +114,8 @@ def create_and_run_model(
         new_theory_payoffs=new_theory_payoffs,
         true_theory=true_theory,
         belief_strength_range=belief_strength_range,
-        noise=noise
+        noise=noise, 
+        noise_std=noise_std   
     )
     
     if use_animation:
@@ -185,7 +188,7 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
                                      true_theory="new", belief_strength_range=(0.5, 2.0),
                                      use_animation=False, max_steps=1000, noise="off", noise_std=0.0, 
                                      animation_params=None, show_final_state=False,
-                                     agent_class=ScientistAgent):
+                                     agent_class=ScientistAgent, custom_graph=None):
     """
     The most important function of this module that you can call on in the main.py to run multiple simulations
     """
@@ -202,7 +205,7 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
             conv_info = create_and_run_model(
                 agent_class=agent_class,  
                 num_agents=num_agents,
-                network_type=network_type,
+                network_type=network_type if custom_graph is None else custom_graph,
                 old_theory_payoff=old_theory_payoff,
                 new_theory_payoffs=new_theory_payoffs,
                 true_theory=true_theory,
@@ -228,7 +231,7 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
         params = {
             "agent_class": agent_class,
             "num_agents": num_agents,
-            "network_type": network_type,
+            "network_type": network_type if custom_graph is None else custom_graph,
             "old_theory_payoff": old_theory_payoff,
             "new_theory_payoffs": new_theory_payoffs,
             "true_theory": true_theory,

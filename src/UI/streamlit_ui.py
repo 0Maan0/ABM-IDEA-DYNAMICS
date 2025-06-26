@@ -13,10 +13,21 @@ import streamlit.components.v1 as components
 from src.run_model_utils import run_simulations_until_convergence
 from src.run_sensitivity_tools import run_full_sensitivity_analysis
 from src.plot_sensitivity_results import plot_all_metrics, plot_all_comparisons
+from src.single_run_analysis import analyze_and_plot_results, load_simulation_results, analyze_convergence_stats
+from src.scientists import ScientistAgent
+from src.super_scientist import SuperScientistAgent
 import plotly.graph_objects as go
+import plotly.express as px
 import base64
 from streamlit_elements import elements, mui
 import json
+from pathlib import Path
+import seaborn as sns
+
+# Set the plotting style
+sns_colors = sns.color_palette("Set2", 8)
+# Convert seaborn colors (0-1 range) to hex for Plotly
+colors = [f'rgb({int(r*255)},{int(g*255)},{int(b*255)})' for r,g,b in sns_colors]
 
 def create_network_visualization(G, height=400):
     """Create an interactive network visualization"""
@@ -52,12 +63,17 @@ def custom_network_creator(num_agents):
         index=[f"Scientist {i+1}" for i in range(num_agents)]
     )
     
-    # Create a mask for diagonal elements
+    # Set upper triangle and diagonal to None to make them uneditable
     for i in range(num_agents):
-        df.iloc[i, i] = None  # Set diagonal to None to make it uneditable
+        for j in range(num_agents):
+            if i <= j:  # This covers both diagonal and upper triangle
+                df.iloc[i, j] = None
     
     # Display the editable adjacency matrix
     st.write("Click cells to connect/disconnect scientists:")
+    st.write("Note: The network must be fully connected (no isolated scientists or groups).")
+    st.write("Note: No scientist in the network should be self-connected.")
+    
     edited_df = st.data_editor(
         df,
         disabled=["index"],  # Disable editing of row labels
@@ -69,17 +85,56 @@ def custom_network_creator(num_agents):
     )
     
     # Convert back to numpy array and to float for NetworkX
-    # Replace any None values with 0 before conversion
     adj_matrix = edited_df.fillna(0).values.astype(float)
+    
+    # Since we only edited the lower triangle, we need to make the matrix symmetric
+    adj_matrix = adj_matrix + adj_matrix.T
     
     # Create NetworkX graph from adjacency matrix
     G = nx.from_numpy_array(adj_matrix)
+    
+    # Check if the network is connected
+    is_connected = nx.is_connected(G)
     
     # Display the network
     st.write("Network Preview:")
     create_network_visualization(G)
     
-    return G
+    return G if is_connected else None
+
+def plot_convergence_analysis_plotly(results_df, network_type: str, num_agents: int):
+    """
+    Create Plotly visualizations for the simulation results.
+    """
+    # Plot 1: Distribution of steps to convergence
+    fig_steps = px.histogram(
+        results_df[results_df['converged']],
+        x='steps_to_convergence',
+        nbins=30,
+        title=f'Distribution of Steps to Convergence ({network_type.capitalize()} Network, {num_agents} Agents)'
+    )
+    fig_steps.update_layout(
+        xaxis_title="Steps to Convergence",
+        yaxis_title="Count"
+    )
+    
+    # Plot 2: Final consensus distribution
+    consensus_counts = results_df['final_consensus'].value_counts()
+    colors = ['#2ecc71' if theory == 'new' else '#e74c3c' for theory in consensus_counts.index]
+    fig_consensus = px.bar(
+        x=consensus_counts.index,
+        y=consensus_counts.values,
+        title=f'Distribution of Final Consensus ({network_type.capitalize()} Network, {num_agents} Agents)',
+        color=consensus_counts.index,
+        color_discrete_map={'new': '#2ecc71', 'old': '#e74c3c'}
+    )
+    fig_consensus.update_layout(
+        xaxis_title="Final Consensus Theory",
+        yaxis_title="Count",
+        showlegend=False
+    )
+    
+    return fig_steps, fig_consensus
 
 def main():
     st.set_page_config(page_title="Opinion Dynamics Model", layout="wide")
@@ -89,14 +144,66 @@ def main():
     with st.sidebar:
         st.header("Model Parameters")
         
+        # Analysis Type Selection (moved to top)
+        st.subheader("Analysis Type")
+        analysis_type = st.radio(
+            "Choose Analysis",
+            ["Regular Simulations", "Sensitivity Analysis", "Zollman Analysis"],
+            help="Choose the type of analysis to run"
+        )
+        
+        if analysis_type == "Sensitivity Analysis":
+            create_plots = st.checkbox("Create Plots", value=True)
+            num_trajectories = st.number_input(
+                "Number of Trajectories",
+                min_value=1,
+                max_value=5000,
+                value=715
+            )
+        elif analysis_type == "Zollman Analysis":
+            create_plots = st.checkbox("Create Plots", value=True)
+        
         # Network Parameters
         st.subheader("Network Parameters")
-        num_agents = st.number_input("Number of Scientists", min_value=2, max_value=100, value=10)
+        num_agents = st.number_input("Number of Scientists", min_value=2, max_value=50, value=6)
+        
+        # Adjust network type options based on analysis type
+        network_options = ["cycle", "wheel", "complete"]
+        if analysis_type != "Zollman Analysis":
+            network_options.append("custom")
+            
         network_type = st.selectbox(
             "Network Type",
-            ["cycle", "wheel", "complete", "custom"],
+            network_options,
             index=0
         )
+        
+        # Agent Parameters
+        st.subheader("Agent Parameters")
+        agent_type = st.selectbox(
+            "Agent Type",
+            ["ScientistAgent", "SuperScientistAgent"],
+            index=0,
+            help="Choose between regular Scientists or Super Scientists with enhanced learning capabilities"
+        )
+        
+        use_noise = st.checkbox(
+            "Add Noise",
+            value=False,
+            help="Enable noise in the agents' observations"
+        )
+        
+        if use_noise:
+            noise_value = st.number_input(
+                "Noise Value",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.1,
+                step=0.05,
+                help="Standard deviation of the Gaussian noise added to observations"
+            )
+        else:
+            noise_value = 0.0
         
         # Theory Parameters
         st.subheader("Theory Parameters")
@@ -151,7 +258,6 @@ def main():
             value=2000
         )
         
-        show_final_state = st.checkbox("Show Final State")
         use_animation = st.checkbox("Use Animation")
         
         max_steps = st.number_input(
@@ -160,25 +266,14 @@ def main():
             max_value=10000,
             value=1000
         )
-        
-        # Analysis Options
-        st.subheader("Analysis Options")
-        run_regular = st.checkbox("Run Regular Simulations", value=True)
-        run_sensitivity = st.checkbox("Run Sensitivity Analysis")
-        
-        if run_sensitivity:
-            create_plots = st.checkbox("Create Plots", value=True)
-            num_trajectories = st.number_input(
-                "Number of Trajectories",
-                min_value=1,
-                max_value=5000,
-                value=715
-            )
 
     # Main area
     custom_network = None
     if network_type == "custom":
         custom_network = custom_network_creator(num_agents)
+        if custom_network is None:
+            st.error("Cannot run simulation with a disconnected network. Please modify the network to ensure all scientists are connected.")
+            st.stop()
     else:
         # Show default network preview
         G = None
@@ -199,7 +294,7 @@ def main():
             params = {
                 'num_simulations': num_simulations,
                 'num_agents': num_agents,
-                'network_type': custom_network if network_type == "custom" else network_type,
+                'network_type': network_type,
                 'old_theory_payoff': old_theory_payoff,
                 'new_theory_payoffs': (new_theory_payoff_low, new_theory_payoff_high),
                 'true_theory': true_theory,
@@ -211,15 +306,120 @@ def main():
                     'interval': 500,
                     'steps_per_frame': 1
                 },
-                'show_final_state': show_final_state,
-                'custom_network': custom_network
+                'noise': "on" if use_noise else "off",
+                'noise_std': noise_value if use_noise else 0.0
             }
             
-            if run_regular:
-                st.write("=== Running Regular Simulations ===")
-                run_simulations_until_convergence(**params)
-            
-            if run_sensitivity:
+            if analysis_type == "Regular Simulations":
+                # Handle custom network
+                if network_type == "custom" and custom_network is not None:
+                    params['custom_graph'] = custom_network
+                
+                # Run simulations
+                results = run_simulations_until_convergence(
+                    agent_class=ScientistAgent if agent_type == "ScientistAgent" else SuperScientistAgent,
+                    **params
+                )
+                
+                # Load and analyze results
+                try:
+                    # Convert results to DataFrame if it's a list
+                    results_df = pd.DataFrame(results) if isinstance(results, list) else results
+                    
+                    # Calculate statistics
+                    total_runs = len(results_df)
+                    converged_mask = results_df['converged'] == True
+                    converged_runs = converged_mask.sum()
+                    convergence_rate = converged_runs / total_runs * 100
+                    
+                    correct_theory_mask = results_df['theory'] == 'Correct Theory'
+                    correct_theory_runs = correct_theory_mask.sum()
+                    correct_theory_rate = correct_theory_runs / total_runs * 100
+                    
+                    converged_steps = results_df[converged_mask]['step']
+                    avg_steps = converged_steps.mean() if len(converged_steps) > 0 else 0
+                    
+                    # Display statistics in a nice format
+                    st.subheader("Simulation Results")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric("Total Runs", total_runs)
+                        st.metric("Converged Runs", f"{converged_runs} ({convergence_rate:.1f}%)")
+                    
+                    with col2:
+                        st.metric("Correct Theory Runs", f"{correct_theory_runs} ({correct_theory_rate:.1f}%)")
+                        st.metric("Average Steps to Convergence", f"{avg_steps:.1f}")
+                    
+                    # Create and display plots
+                    st.subheader("Analysis Plots")
+                    
+                    # Plot 1: Steps to convergence
+                    fig_steps = px.histogram(
+                        results_df[converged_mask],
+                        x='step',
+                        nbins=30,
+                        title=f'Distribution of Steps to Convergence<br>({network_type.capitalize()} Network, {num_agents} Agents)',
+                        color_discrete_sequence=[colors[2]]  # Use third color from Set2 (green)
+                    )
+                    fig_steps.update_layout(
+                        xaxis_title="Steps to Convergence",
+                        yaxis_title="Count",
+                        title={
+                            'y':0.95,
+                            'x':0.5,
+                            'xanchor': 'center',
+                            'yanchor': 'top'
+                        },
+                        margin=dict(t=80),  # Add more margin at the top for the title
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(family="Arial")
+                    )
+                    
+                    # Plot 2: Theory distribution
+                    theory_counts = results_df['theory'].fillna('Not Converged').value_counts()
+                    colors_dict = {
+                        'Correct Theory': colors[2],    # Green
+                        'Old Theory': colors[1],        # Red/Orange
+                        'Incorrect Theory': colors[1],  # Same as Old Theory
+                        'Not Converged': colors[7]      # Gray
+                    }
+                    
+                    fig_consensus = px.bar(
+                        x=theory_counts.index,
+                        y=theory_counts.values,
+                        title=f'Distribution of Final Consensus<br>({network_type.capitalize()} Network, {num_agents} Agents)',
+                        color=theory_counts.index,
+                        color_discrete_map=colors_dict
+                    )
+                    fig_consensus.update_layout(
+                        xaxis_title="Final Consensus Theory",
+                        yaxis_title="Count",
+                        showlegend=False,
+                        title={
+                            'y':0.95,
+                            'x':0.5,
+                            'xanchor': 'center',
+                            'yanchor': 'top'
+                        },
+                        margin=dict(t=80),  # Add more margin at the top for the title
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(family="Arial")
+                    )
+                    
+                    # Display plots
+                    col3, col4 = st.columns(2)
+                    with col3:
+                        st.plotly_chart(fig_steps, use_container_width=True)
+                    with col4:
+                        st.plotly_chart(fig_consensus, use_container_width=True)
+                        
+                except Exception as e:
+                    st.error(f"An error occurred while analyzing results: {str(e)}")
+                
+            elif analysis_type == "Sensitivity Analysis":
                 st.write("=== Running Sensitivity Analysis ===")
                 run_full_sensitivity_analysis(
                     num_trajectories=num_trajectories,
@@ -227,14 +427,35 @@ def main():
                     run_comparison=True
                 )
                 
-            if create_plots:
-                st.write("=== Creating Sensitivity Analysis Plots ===")
-                for net_type in ['cycle', 'wheel', 'complete']:
-                    plot_all_metrics(network_type=net_type, 
-                                   num_trajectories=num_trajectories)
+                if create_plots:
+                    st.write("=== Creating Sensitivity Analysis Plots ===")
+                    for net_type in ['cycle', 'wheel', 'complete']:
+                        plot_all_metrics(network_type=net_type, 
+                                       num_trajectories=num_trajectories)
+                    
+                    plot_all_comparisons(num_trajectories=num_trajectories)
+                    st.success("All plots have been saved to the analysis_plots directory!")
+            
+            elif analysis_type == "Zollman Analysis":
+                st.write("=== Running Zollman Analysis ===")
+                from src.zollman_analysis import run_zollman_analysis
                 
-                plot_all_comparisons(num_trajectories=num_trajectories)
-                st.success("All plots have been saved to the analysis_plots directory!")
+                results = run_zollman_analysis(
+                    num_simulations=num_simulations,
+                    num_agents=num_agents,
+                    network_type=network_type,
+                    agent_type=agent_type,
+                    use_noise=use_noise,
+                    noise_value=noise_value,
+                    custom_network=custom_network if network_type == "custom" else None
+                )
+                
+                if create_plots:
+                    st.write("=== Creating Zollman Analysis Plots ===")
+                    st.write("Learning Results:")
+                    st.pyplot(results['learning_plot'])
+                    st.write("Speed Results:")
+                    st.pyplot(results['speed_plot'])
 
 if __name__ == "__main__":
     main() 
