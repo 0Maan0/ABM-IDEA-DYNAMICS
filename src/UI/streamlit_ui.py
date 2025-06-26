@@ -162,7 +162,12 @@ def main():
         
         # Network Parameters
         st.subheader("Network Parameters")
-        num_agents = st.number_input("Number of Scientists", min_value=2, max_value=50, value=6)
+        
+        # Only show number of scientists if not doing Zollman analysis
+        if analysis_type != "Zollman Analysis":
+            num_agents = st.number_input("Number of Scientists", min_value=2, max_value=50, value=6)
+        else:
+            num_agents = 6  # Default value, won't be used
         
         # Only show network type selection if not doing Zollman analysis
         if analysis_type != "Zollman Analysis":
@@ -200,67 +205,78 @@ def main():
             help="Choose between regular Scientists or Super Scientists with enhanced learning capabilities"
         )
         
-        use_noise = st.checkbox(
-            "Add Noise",
-            value=False,
-            help="Enable noise in the agents' observations"
-        )
-        
-        if use_noise:
-            noise_value = st.number_input(
-                "Noise Value",
+        if analysis_type != "Zollman Analysis":
+            use_noise = st.checkbox(
+                "Add Noise",
+                value=False,
+                help="Enable noise in the agents' observations"
+            )
+            
+            if use_noise:
+                noise_value = st.number_input(
+                    "Noise Value",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.1,
+                    step=0.05,
+                    help="Standard deviation of the Gaussian noise added to observations"
+                )
+            else:
+                noise_value = 0.0
+            
+            # Theory Parameters
+            st.subheader("Theory Parameters")
+            old_theory_payoff = st.number_input(
+                "Old Theory Payoff",
                 min_value=0.0,
                 max_value=1.0,
-                value=0.1,
-                step=0.05,
-                help="Standard deviation of the Gaussian noise added to observations"
+                value=0.5,
+                step=0.1
+            )
+            new_theory_payoff_low = st.number_input(
+                "New Theory Payoff (Old True)",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.4,
+                step=0.1
+            )
+            new_theory_payoff_high = st.number_input(
+                "New Theory Payoff (New True)",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.6,
+                step=0.1
+            )
+            true_theory = st.selectbox(
+                "True Theory",
+                ["old", "new"],
+                index=1
+            )
+            
+            belief_strength_low = st.number_input(
+                "Belief Strength (Min)",
+                min_value=0.0,
+                max_value=10.0,
+                value=0.5,
+                step=0.1
+            )
+            belief_strength_high = st.number_input(
+                "Belief Strength (Max)",
+                min_value=0.0,
+                max_value=10.0,
+                value=2.0,
+                step=0.1
             )
         else:
+            # Set default values for Zollman analysis
+            use_noise = False
             noise_value = 0.0
-        
-        # Theory Parameters
-        st.subheader("Theory Parameters")
-        old_theory_payoff = st.number_input(
-            "Old Theory Payoff",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.5,
-            step=0.1
-        )
-        new_theory_payoff_low = st.number_input(
-            "New Theory Payoff (Old True)",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.4,
-            step=0.1
-        )
-        new_theory_payoff_high = st.number_input(
-            "New Theory Payoff (New True)",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.6,
-            step=0.1
-        )
-        true_theory = st.selectbox(
-            "True Theory",
-            ["old", "new"],
-            index=1
-        )
-        
-        belief_strength_low = st.number_input(
-            "Belief Strength (Min)",
-            min_value=0.0,
-            max_value=10.0,
-            value=0.5,
-            step=0.1
-        )
-        belief_strength_high = st.number_input(
-            "Belief Strength (Max)",
-            min_value=0.0,
-            max_value=10.0,
-            value=2.0,
-            step=0.1
-        )
+            old_theory_payoff = 0.5
+            new_theory_payoff_low = 0.4
+            new_theory_payoff_high = 0.6
+            true_theory = "new"
+            belief_strength_low = 0.5
+            belief_strength_high = 2.0
 
     # Main area
     custom_network = None
