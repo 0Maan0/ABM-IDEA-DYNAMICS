@@ -109,7 +109,7 @@ def plot_convergence_analysis_plotly(results_df, network_type: str, num_agents: 
     # Plot 1: Distribution of steps to convergence
     fig_steps = px.histogram(
         results_df[results_df['converged']],
-        x='steps_to_convergence',
+        x='step',
         nbins=30,
         title=f'Distribution of Steps to Convergence ({network_type.capitalize()} Network, {num_agents} Agents)'
     )
@@ -119,7 +119,7 @@ def plot_convergence_analysis_plotly(results_df, network_type: str, num_agents: 
     )
     
     # Plot 2: Final consensus distribution
-    consensus_counts = results_df['final_consensus'].value_counts()
+    consensus_counts = results_df['theory'].value_counts()
     colors = ['#2ecc71' if theory == 'new' else '#e74c3c' for theory in consensus_counts.index]
     fig_consensus = px.bar(
         x=consensus_counts.index,
@@ -148,7 +148,7 @@ def main():
         st.subheader("Analysis Type")
         analysis_type = st.radio(
             "Choose Analysis",
-            ["Regular Simulations", "Sensitivity Analysis", "Zollman Analysis"],
+            ["Regular Simulations", "Make Animation", "Sensitivity Analysis", "Zollman Analysis"],
             help="Choose the type of analysis to run"
         )
         
@@ -169,13 +169,36 @@ def main():
         
         # Adjust network type options based on analysis type
         network_options = ["cycle", "wheel", "complete"]
-        if analysis_type != "Zollman Analysis":
+        if analysis_type not in ["Zollman Analysis", "Make Animation"]:
             network_options.append("custom")
             
         network_type = st.selectbox(
             "Network Type",
             network_options,
             index=0
+        )
+        
+        # Simulation Parameters (moved up)
+        st.subheader("Simulation Parameters")
+        
+        # Set simulation parameters based on analysis type
+        if analysis_type == "Make Animation":
+            use_animation = True
+            num_simulations = 1
+        else:
+            use_animation = False
+            num_simulations = st.number_input(
+                "Number of Simulations",
+                min_value=1,
+                max_value=10000,
+                value=2000
+            )
+        
+        max_steps = st.number_input(
+            "Maximum Steps",
+            min_value=1,
+            max_value=10000,
+            value=1000
         )
         
         # Agent Parameters
@@ -247,24 +270,6 @@ def main():
             max_value=10.0,
             value=2.0,
             step=0.1
-        )
-        
-        # Simulation Parameters
-        st.subheader("Simulation Parameters")
-        num_simulations = st.number_input(
-            "Number of Simulations",
-            min_value=1,
-            max_value=10000,
-            value=2000
-        )
-        
-        use_animation = st.checkbox("Use Animation")
-        
-        max_steps = st.number_input(
-            "Maximum Steps",
-            min_value=1,
-            max_value=10000,
-            value=1000
         )
 
     # Main area
