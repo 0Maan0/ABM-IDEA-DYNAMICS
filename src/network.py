@@ -9,7 +9,6 @@ import itertools
 import math
 
 
-
 class ScienceNetworkModel(Model):
     """
     The main model for simulating the spread of a new scientific theory in a network.
