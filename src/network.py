@@ -3,7 +3,7 @@ from mesa.time import SimultaneousActivation
 import networkx as nx
 import random
 from src.scientists import ScientistAgent
-from src.influential_scientists import SuperScientistAgent
+from src.super_scientist import SuperScientistAgent
 import numpy as np
 import itertools
 import math
