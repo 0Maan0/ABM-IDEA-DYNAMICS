@@ -6,13 +6,14 @@ from src.scientists import ScientistAgent
 from src.influential_scientists import SuperScientistAgent
 import numpy as np
 
+
 class ScienceNetworkModel(Model):
     """
-    The main model for simulating the spread of a new scientific theory in a network.  
+    The main model for simulating the spread of a new scientific theory in a network.
     For now you can choose between a cycle, wheel and complete network.
     """
     def __init__(
-        self, 
+        self,
         agent_class=ScientistAgent,  # Default to regular ScientistAgent
         num_agents=10,
         network_type="complete",
@@ -23,13 +24,13 @@ class ScienceNetworkModel(Model):
         noise="off",
         noise_loc=0.0,
         noise_std=0.5,
-        h_index=0.0 
+        h_index=0.0
     ):
         super().__init__()
         self.num_agents = num_agents
         self.network_type = network_type
         self.old_theory_payoff = old_theory_payoff
-        self.new_theory_payoffs = new_theory_payoffs    
+        self.new_theory_payoffs = new_theory_payoffs
         self.true_theory = true_theory
         self.belief_strength_range = belief_strength_range
         self.schedule = SimultaneousActivation(self)
@@ -41,27 +42,27 @@ class ScienceNetworkModel(Model):
         self.noise_active = noise
         self.noise_loc = noise_loc
         self.noise_std = noise_std
-        
+
         # Start scientists with random beliefs about which theory is true
         # TODO: make different initial conditions for this?
-        
+
         # Create agents with initial beliefs and belief strength
         for i in range(num_agents):
             # Initial belief that new theory is true
             initial_belief = random.random()  # Uniform between 0 and 1
-            
+
             # Make a random belief strength within the range to determine resistance to change
             belief_strength = random.uniform(*belief_strength_range)
-            
+
             if self.agent_class == SuperScientistAgent:
                 # Set h_index value - could be fixed or random
                 h_index_value = random.uniform(0.0, 1.0)
-                agent = self.agent_class(i, self, 
+                agent = self.agent_class(i, self,
                                         initial_belief=initial_belief,
                                         belief_strength=belief_strength,
                                         h_index=h_index_value)
             else:
-                agent = self.agent_class(i, self, 
+                agent = self.agent_class(i, self,
                                         initial_belief=initial_belief,
                                         belief_strength=belief_strength)
             self.schedule.add(agent)
@@ -86,7 +87,7 @@ class ScienceNetworkModel(Model):
         """Get the payoff for a given theory choice"""
         if theory_choice == "old":
             return self.old_theory_payoff
-        
+
         # For new theory, payoff depends on which theory is actually true
         payoff_idx = 1 if self.true_theory == "new" else 0
         return self.new_theory_payoffs[payoff_idx]
@@ -94,12 +95,12 @@ class ScienceNetworkModel(Model):
     def step(self):
         self.step_count += 1
         self.schedule.step()
-        
+
         # Check if the simulation has converged after each step
         if not self.converged and self.convergence_status():
             self.converged = True
             self.convergence_step = self.step_count
-    
+
     def convergence_status(self):
         """
         According to Zollman's paper, a population has finished learning if one of two conditions are met:
@@ -108,28 +109,28 @@ class ScienceNetworkModel(Model):
         """
         actions = [agent.current_choice for agent in self.schedule.agents]
         beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
-        
-        # Condition 1: Everyone using old theory 
+
+        # Condition 1: Everyone using old theory
         if all(action == "old" for action in actions):
             return True
-        
-        # Condition 2: Everyone strongly believes in new theory 
+
+        # Condition 2: Everyone strongly believes in new theory
         if all(b > 0.9999 for b in beliefs):
             return True
-            
+
         return False
 
     def get_convergence_info(self):
         if self.converged:
             actions = [agent.current_choice for agent in self.schedule.agents]
             beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
-            
+
             # Check convergence type
             if all(action == "old" for action in actions):
                 theory = "Old Theory"
             elif all(b > 0.9999 for b in beliefs):
                 theory = "Correct Theory" if self.true_theory == "new" else "Incorrect Theory"
-            
+
             return {
                 'converged': True,
                 'step': self.convergence_step,
