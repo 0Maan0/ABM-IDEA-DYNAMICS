@@ -176,6 +176,13 @@ class SuperScientistAgent(Agent):
             raise ValueError("Unknown influence calculation method")
 
     def step(self):
+        """
+        A[Agent Step] --> B[Run Experiment]
+        B --> C[Update Self-belief]
+        C --> D[Get Neighbors]
+        D --> E[Calculate Influence Weight]
+        E --> F[Update Belief with Weighted Evidence]
+        """
         # Reset current round results
         self.current_old_theory_result = None
         self.current_new_theory_result = None

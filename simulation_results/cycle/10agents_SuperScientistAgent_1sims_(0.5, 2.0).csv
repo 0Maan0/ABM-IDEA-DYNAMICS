@@ -1,0 +1,2 @@
+simulation_id,agent_class,network_type,num_agents,old_theory_payoff,new_theory_payoff_if_old_true,new_theory_payoff_if_new_true,true_theory,belief_strength_range,converged,step,theory
+1,SuperScientistAgent,cycle,10,0.5,0.4,0.6,new,"(0.5, 2.0)",True,85,Correct Theory

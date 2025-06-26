@@ -9,7 +9,7 @@ from src.run_model_utils import run_simulations_until_convergence
 def run_noise_experiment(
     network_sizes=[2, 4, 6, 8, 10, 12],
     noise_levels=[0.0],
-    num_simulations=1000,
+    num_simulations=1,
     max_steps=2000
 ):
     """
