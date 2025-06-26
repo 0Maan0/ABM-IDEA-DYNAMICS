@@ -63,12 +63,17 @@ def custom_network_creator(num_agents):
         index=[f"Scientist {i+1}" for i in range(num_agents)]
     )
     
-    # Create a mask for diagonal elements
+    # Set upper triangle and diagonal to None to make them uneditable
     for i in range(num_agents):
-        df.iloc[i, i] = None  # Set diagonal to None to make it uneditable
+        for j in range(num_agents):
+            if i <= j:  # This covers both diagonal and upper triangle
+                df.iloc[i, j] = None
     
     # Display the editable adjacency matrix
     st.write("Click cells to connect/disconnect scientists:")
+    st.write("Note: The network must be fully connected (no isolated scientists or groups).")
+    st.write("Note: No scientist in the network should be self-connected.")
+    
     edited_df = st.data_editor(
         df,
         disabled=["index"],  # Disable editing of row labels
@@ -80,17 +85,22 @@ def custom_network_creator(num_agents):
     )
     
     # Convert back to numpy array and to float for NetworkX
-    # Replace any None values with 0 before conversion
     adj_matrix = edited_df.fillna(0).values.astype(float)
+    
+    # Since we only edited the lower triangle, we need to make the matrix symmetric
+    adj_matrix = adj_matrix + adj_matrix.T
     
     # Create NetworkX graph from adjacency matrix
     G = nx.from_numpy_array(adj_matrix)
+    
+    # Check if the network is connected
+    is_connected = nx.is_connected(G)
     
     # Display the network
     st.write("Network Preview:")
     create_network_visualization(G)
     
-    return G
+    return G if is_connected else None
 
 def plot_convergence_analysis_plotly(results_df, network_type: str, num_agents: int):
     """
@@ -155,7 +165,7 @@ def main():
         
         # Network Parameters
         st.subheader("Network Parameters")
-        num_agents = st.number_input("Number of Scientists", min_value=2, max_value=100, value=6)
+        num_agents = st.number_input("Number of Scientists", min_value=2, max_value=50, value=6)
         
         # Adjust network type options based on analysis type
         network_options = ["cycle", "wheel", "complete"]
@@ -261,6 +271,9 @@ def main():
     custom_network = None
     if network_type == "custom":
         custom_network = custom_network_creator(num_agents)
+        if custom_network is None:
+            st.error("Cannot run simulation with a disconnected network. Please modify the network to ensure all scientists are connected.")
+            st.stop()
     else:
         # Show default network preview
         G = None
