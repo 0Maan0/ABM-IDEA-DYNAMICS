@@ -1,4 +1,5 @@
 from datetime import datetime
+import random
 from src.run_model_utils import *
 from src.run_sensitivity_tools import run_full_sensitivity_analysis
 from src.plot_sensitivity_results import (
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     belief_strength_range = (0.5, 2.0)  # Belief strength range scientists have which will affect their resistance to change their beliefs
     
     # Number of simulations to run
-    num_simulations = 2000
+    num_simulations = 1
     show_final_state = False  # True if you want to see the final state of the simulation (to check convergence)
     
     # Parameters for the animation 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     create_sensitivity_plots = False #True
     
     # Sensitivity analysis parameters
-    num_trajectories = 715  # Will generate about 715 * 7 = 5005 parameter combinations (we should do 5k)
+    num_trajectories = 4 # Will generate about 715 * 7 = 5005 parameter combinations (we should do 5k)
     
     if run_regular_simulations:
         print("\n=== Running Regular Simulations ===")
