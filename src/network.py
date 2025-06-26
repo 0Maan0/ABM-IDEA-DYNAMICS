@@ -70,7 +70,7 @@ class ScienceNetworkModel(Model):
         elif network_type == "complete":
             return nx.complete_graph(self.num_agents)
         elif network_type == "bipartite":
-            return generate_complete_bipartite_graph(self.num_agents)
+            return self.generate_complete_bipartite_graph(self.num_agents)
         elif network_type == "cliques":
             G, _ = self.generate_ring_of_cliques(self.num_agents)
             return G
