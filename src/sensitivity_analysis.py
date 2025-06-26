@@ -9,20 +9,25 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
+import random
 import os
 from datetime import datetime
+from src.scientists import ScientistAgent
+from src.influential_scientists import SuperScientistAgent
 
 class SensitivityAnalyzer:
     def __init__(self):
         self.problem = {
-            'num_vars': 6,
+            'num_vars': 8,
             'names': [
                 'num_agents',
                 'old_theory_payoff',
                 'new_theory_payoff_old_true',
                 'new_theory_payoff_new_true',
                 'belief_strength_min',
-                'belief_strength_max'
+                'belief_strength_max',
+                'h_index_min',
+                'h_index_max'
             ],
             'bounds': [
                 [5, 50],       # num_agents
@@ -30,18 +35,21 @@ class SensitivityAnalyzer:
                 [0.1, 0.9],    # new_theory_payoff when old theory is true
                 [0.1, 0.9],    # new_theory_payoff when new theory is true
                 [0.1, 2.0],    # belief_strength_range min
-                [0.5, 4.0]     # belief_strength_range max
+                [0.5, 4.0],     # belief_strength_range max
+                [0.0, 1.0],     # h_index min
+                [0.0, 1.0]      # h_index max
             ]
         }
         
         # Create directories for results if they don't exist
         os.makedirs("analysis_results", exist_ok=True)
         os.makedirs("analysis_plots", exist_ok=True)
-    
+        
+
     def _run_single_instance(self, args):
         """Helper function for parallel processing"""
         try:
-            params, network_type, num_steps, num_replicates = args
+            params, network_type, num_steps, num_replicates, agent_class = args
             results = []
             
             for rep in range(num_replicates):
@@ -50,9 +58,18 @@ class SensitivityAnalyzer:
                     network_type=network_type,
                     old_theory_payoff=params[1],
                     new_theory_payoffs=(params[2], params[3]),
-                    true_theory="new",  # Fixed for sensitivity analysis
-                    belief_strength_range=(params[4], max(params[4] + 0.1, params[5]))
+                    true_theory="new",
+                    belief_strength_range=(params[4], max(params[4] + 0.1, params[5])),
+                    agent_class=agent_class
                 )
+                
+                    # If using SuperScientistAgent, assign random h-index within range
+                if agent_class == SuperScientistAgent:
+                    h_index_min = params[6] #h_index_min
+                    h_index_max = max(params[6] + 0.01, params[7])  # Ensure max > min
+                    for agent in model.schedule.agents:
+                        agent.h_index = random.uniform(h_index_min, h_index_max)
+                
                 
                 # Run until convergence or max steps
                 for _ in range(num_steps):
@@ -86,7 +103,7 @@ class SensitivityAnalyzer:
                 'old_theory_rate': 0
             }
     
-    def save_sensitivity_results(self, Si, network_type, output_metric, timestamp):
+    def save_sensitivity_results(self, Si, network_type, output_metric, timestamp, agent_class=ScientistAgent):
         """Save sensitivity analysis results to CSV files"""
         results_dir = f"analysis_results/{network_type}"
         os.makedirs(results_dir, exist_ok=True)
@@ -98,13 +115,14 @@ class SensitivityAnalyzer:
             'sigma': Si['sigma']
         })
         
-        filename = f"{results_dir}/{output_metric}_{timestamp}.csv"
+        agent_name = agent_class.__name__
+        filename = f"{results_dir}/{output_metric}_{agent_name}_{timestamp}.csv"
         metrics_df.to_csv(filename, index=False)
         print(f"Saved sensitivity results to {filename}")
         
         return filename
     
-    def morris_analysis(self, num_trajectories=10, network_type="cycle", output_metric='convergence_time'):
+    def morris_analysis(self, num_trajectories=10, network_type="cycle", output_metric='convergence_time',agent_class=ScientistAgent):
         """
         Perform Morris sensitivity analysis and save results
         """
@@ -118,7 +136,7 @@ class SensitivityAnalyzer:
         print(f"Generated {len(param_values)} parameter combinations")
         
         # Parallelisation setup
-        args_list = [(params, network_type, 500, 2) for params in param_values]  
+        args_list = [(params, network_type, 500, 2,agent_class) for params in param_values]  
 
         num_processes = min(cpu_count(), len(param_values))
         chunk_size = max(1, len(param_values) // (num_processes * 4))
@@ -138,7 +156,7 @@ class SensitivityAnalyzer:
         Y = [result[output_metric] for result in results]
         Si = morris_analyze.analyze(self.problem, param_values, np.array(Y))
 
-        results_file = self.save_sensitivity_results(Si, network_type, output_metric, timestamp)
+        results_file = self.save_sensitivity_results(Si, network_type, output_metric, timestamp,agent_class)
         print(f"Analysis complete. Results saved to: {results_file}")
         
         return Si, timestamp
