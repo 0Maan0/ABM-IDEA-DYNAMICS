@@ -65,16 +65,16 @@ def plot_single_analysis(network_type, metric, timestamp=None, save=True, num_tr
         except FileNotFoundError:
             print(f"Results not found for {network_type} - {metric} - {agent_type}")
             
-    plt.suptitle(f'Sensitivity Analysis - {network_type.capitalize()} Network - {metric}')
+    plt.suptitle(f'Sensitivity Analysis - {network_type.capitalize()} Network - {metric} of {agent_types[0]}')
     plt.tight_layout()
     
     if save:
         save_dir = f"analysis_plots/{network_type}"
         os.makedirs(save_dir, exist_ok=True)
         traj_str = f"_{num_trajectories}traj" if num_trajectories is not None else ""
-        plt.savefig(f"{save_dir}/{network_type}_{metric}_sensitivity{traj_str}.pdf",
+        plt.savefig(f"{save_dir}/{network_type}_{metric}_sensitivity{traj_str}_{agent_types[0]}.pdf",
                    format='pdf', bbox_inches='tight')
-    
+        plt.close()
     return fig
 
 def plot_network_comparison(metric, network_types=['cycle', 'wheel', 'complete'], 
@@ -115,15 +115,16 @@ def plot_network_comparison(metric, network_types=['cycle', 'wheel', 'complete']
     ax2.set_xlabel('Standard Deviation')
     ax2.set_title('Parameter Interactions Across Network Types')
     
-    plt.suptitle(f'Complete Comparison - {metric}')
+    plt.suptitle(f'Complete Comparison - {metric} of {agent_types[0]}')
     plt.tight_layout()
     
     if save:
         save_dir = "analysis_plots/comparison"
         os.makedirs(save_dir, exist_ok=True)
         traj_str = f"_{num_trajectories}traj" if num_trajectories is not None else ""
-        plt.savefig(f"{save_dir}/network_comparison_{metric}{traj_str}.pdf",
+        plt.savefig(f"{save_dir}/network_comparison_{metric}{traj_str}_{agent_type[0]}.pdf",
                    format='pdf', bbox_inches='tight')
+        plt.close()
     
     return fig
 
