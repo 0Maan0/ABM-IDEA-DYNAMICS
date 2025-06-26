@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from src.sensitivity_analysis import SensitivityAnalyzer
 from src.scientists import ScientistAgent
-from src.influential_scientists import SuperScientistAgent
+from src.super_scientist import SuperScientistAgent
 
 def run_sensitivity_analysis(network_type="cycle", num_trajectories=10):
     """Run sensitivity analysis for a single network type and all metrics"""

@@ -13,7 +13,7 @@ import random
 import os
 from datetime import datetime
 from src.scientists import ScientistAgent
-from src.influential_scientists import SuperScientistAgent
+from src.super_scientist import SuperScientistAgent
 
 class SensitivityAnalyzer:
     def __init__(self):
