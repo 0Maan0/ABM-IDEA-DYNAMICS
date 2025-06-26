@@ -5,6 +5,9 @@ import random
 from src.scientists import ScientistAgent
 from src.influential_scientists import SuperScientistAgent
 import numpy as np
+import itertools
+import math
+
 
 
 class ScienceNetworkModel(Model):
@@ -12,6 +15,10 @@ class ScienceNetworkModel(Model):
     The main model for simulating the spread of a new scientific theory in a network.
     For now you can choose between a cycle, wheel and complete network.
     """
+
+    # Define network constants
+    network_types = ["cycle", "wheel", "complete", "bipartite", "cliques", "custom"]
+
     def __init__(
         self,
         agent_class=ScientistAgent,  # Default to regular ScientistAgent
@@ -54,6 +61,7 @@ class ScienceNetworkModel(Model):
             # Make a random belief strength within the range to determine resistance to change
             belief_strength = random.uniform(*belief_strength_range)
 
+
             if self.agent_class == SuperScientistAgent:
                 # Set h_index value - could be fixed or random
                 h_index_value = random.uniform(0.0, 1.0)
@@ -75,6 +83,11 @@ class ScienceNetworkModel(Model):
             return nx.wheel_graph(self.num_agents)
         elif network_type == "complete":
             return nx.complete_graph(self.num_agents)
+        elif network_type == "bipartite":
+            return self.generate_complete_bipartite_graph(self.num_agents)
+        elif network_type == "cliques":
+            G, _ = self.generate_ring_of_cliques(self.num_agents)
+            return G
         elif isinstance(network_type, nx.Graph):
             # Custom network
             if network_type.number_of_nodes() != self.num_agents:
@@ -82,6 +95,77 @@ class ScienceNetworkModel(Model):
             return network_type
         else:
             raise ValueError("Unknown network type or invalid custom network")
+
+    @staticmethod
+    def generate_complete_bipartite_graph(num_nodes):
+        """
+        Create a complete bipartite graph with `num_nodes` nodes split as evenly as possible
+        between the two sets.
+        """
+        if num_nodes < 2:
+            raise ValueError("At least 2 nodes are required to form a bipartite graph.")
+
+        part1 = num_nodes // 2
+        part2 = num_nodes - part1  # Handles both even and odd num_nodes
+
+        G = nx.complete_bipartite_graph(part1, part2)
+        return G
+
+    @staticmethod
+    def generate_ring_of_cliques(num_nodes):
+        """
+        Generate a ring of cliques with exactly `num_nodes` nodes.
+        Special cases:
+        - num_nodes == 2: single edge between two nodes.
+        - num_nodes == 3: triangle (3-node clique).
+        For num_nodes >= 4:
+        - Number of cliques = floor(sqrt(num_nodes))
+        - Nodes per clique = base size + (1 if extra node assigned)
+        - Connect first node of each clique to next to form a ring
+        """
+        if num_nodes < 2:
+            raise ValueError("At least 2 nodes are required.")
+
+        if num_nodes == 2:
+            # Just a single edge between node 0 and 1
+            G = nx.Graph()
+            G.add_nodes_from([0,1])
+            G.add_edge(0, 1)
+            clique_sizes = [2]
+            return G, clique_sizes
+
+        if num_nodes == 3:
+            # Complete graph of 3 nodes (triangle)
+            G = nx.complete_graph(3)
+            clique_sizes = [3]
+            return G, clique_sizes
+
+        # For num_nodes >= 4, use ring of cliques logic
+        num_cliques = math.isqrt(num_nodes)
+        base_clique_size = num_nodes // num_cliques
+        extras = num_nodes % num_cliques
+
+        # Distribute extras to the first few cliques
+        clique_sizes = [base_clique_size + (1 if i < extras else 0) for i in range(num_cliques)]
+
+        G = nx.Graph()
+        node_counter = 0
+        clique_node_lists = []
+
+        for size in clique_sizes:
+            nodes = list(range(node_counter, node_counter + size))
+            G.add_nodes_from(nodes)
+            G.add_edges_from(itertools.combinations(nodes, 2))  # fully connect clique
+            clique_node_lists.append(nodes)
+            node_counter += size
+
+        # Connect each clique to the next to form a ring (1 edge per pair)
+        for i in range(num_cliques):
+            a = clique_node_lists[i][0]
+            b = clique_node_lists[(i + 1) % num_cliques][0]
+            G.add_edge(a, b)
+
+        return G, clique_sizes  # clique_sizes probably not necessary
 
     def get_action_payoff(self, theory_choice):
         """Get the payoff for a given theory choice"""
