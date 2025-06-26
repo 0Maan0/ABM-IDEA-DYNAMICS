@@ -1,0 +1,9 @@
+parameter,mu_star,mu,sigma
+num_agents,0.3,0.0,0.7071067811865476
+old_theory_payoff,0.6,0.0,1.0
+new_theory_payoff_old_true,0.15,0.15,0.47434164902525694
+new_theory_payoff_new_true,0.3,-0.3,0.6324555320336759
+belief_strength_min,0.3,0.0,0.7071067811865476
+belief_strength_max,0.75,-0.15,1.1067971810589328
+h_index_min,0.9,0.0,1.224744871391589
+h_index_max,0.45,-0.45,0.7245688373094719
