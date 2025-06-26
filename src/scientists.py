@@ -63,7 +63,7 @@ class ScientistAgent(Agent):
         
         return "new" if new_theory_prob > old_theory_prob else "old"
 
-    def update_belief(self, success):
+    def update_belief(self, success,weight=1.0):
         """
         Bayesian update based on experimental result
         """
