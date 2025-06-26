@@ -4,14 +4,21 @@ import networkx as nx
 import random
 from src.scientists import ScientistAgent
 import numpy as np
+import itertools
+import math
+
 
 class ScienceNetworkModel(Model):
     """
-    The main model for simulating the spread of a new scientific theory in a network.  
+    The main model for simulating the spread of a new scientific theory in a network.
     For now you can choose between a cycle, wheel and complete network.
     """
+
+    # Define network constants
+    network_types = ["cycle", "wheel", "complete", "bipartite", "cliques", "custom"]
+
     def __init__(
-        self, 
+        self,
         agent_class=ScientistAgent,  # Default to regular ScientistAgent
         num_agents=10,
         network_type="complete",
@@ -39,17 +46,17 @@ class ScienceNetworkModel(Model):
         self.noise_active = noise
         self.noise_loc = noise_loc
         self.noise_std = noise_std
-        
+
         # Start scientists with random beliefs about which theory is true
         # TODO: make different initial conditions for this?
         for i in range(num_agents):
             # Initial belief that new theory is true
             initial_belief = random.random()  # Uniform between 0 and 1
-            
+
             # Make a random belief strength within the range to determine resistance to change
             belief_strength = random.uniform(*belief_strength_range)
-            
-            agent = self.agent_class(i, self, 
+
+            agent = self.agent_class(i, self,
                                  initial_belief=initial_belief,
                                  belief_strength=belief_strength)
             self.schedule.add(agent)
@@ -62,6 +69,11 @@ class ScienceNetworkModel(Model):
             return nx.wheel_graph(self.num_agents)
         elif network_type == "complete":
             return nx.complete_graph(self.num_agents)
+        elif network_type == "bipartite":
+            return generate_complete_bipartite_graph(self.num_agents)
+        elif network_type == "cliques":
+            G, _ = self.generate_ring_of_cliques(self.num_agents)
+            return G
         elif isinstance(network_type, nx.Graph):
             # Custom network
             if network_type.number_of_nodes() != self.num_agents:
@@ -70,11 +82,82 @@ class ScienceNetworkModel(Model):
         else:
             raise ValueError("Unknown network type or invalid custom network")
 
+    @staticmethod
+    def generate_complete_bipartite_graph(num_nodes):
+        """
+        Create a complete bipartite graph with `num_nodes` nodes split as evenly as possible
+        between the two sets.
+        """
+        if num_nodes < 2:
+            raise ValueError("At least 2 nodes are required to form a bipartite graph.")
+
+        part1 = num_nodes // 2
+        part2 = num_nodes - part1  # Handles both even and odd num_nodes
+
+        G = nx.complete_bipartite_graph(part1, part2)
+        return G
+
+    @staticmethod
+    def generate_ring_of_cliques(num_nodes):
+        """
+        Generate a ring of cliques with exactly `num_nodes` nodes.
+        Special cases:
+        - num_nodes == 2: single edge between two nodes.
+        - num_nodes == 3: triangle (3-node clique).
+        For num_nodes >= 4:
+        - Number of cliques = floor(sqrt(num_nodes))
+        - Nodes per clique = base size + (1 if extra node assigned)
+        - Connect first node of each clique to next to form a ring
+        """
+        if num_nodes < 2:
+            raise ValueError("At least 2 nodes are required.")
+
+        if num_nodes == 2:
+            # Just a single edge between node 0 and 1
+            G = nx.Graph()
+            G.add_nodes_from([0,1])
+            G.add_edge(0, 1)
+            clique_sizes = [2]
+            return G, clique_sizes
+
+        if num_nodes == 3:
+            # Complete graph of 3 nodes (triangle)
+            G = nx.complete_graph(3)
+            clique_sizes = [3]
+            return G, clique_sizes
+
+        # For num_nodes >= 4, use ring of cliques logic
+        num_cliques = math.isqrt(num_nodes)
+        base_clique_size = num_nodes // num_cliques
+        extras = num_nodes % num_cliques
+
+        # Distribute extras to the first few cliques
+        clique_sizes = [base_clique_size + (1 if i < extras else 0) for i in range(num_cliques)]
+
+        G = nx.Graph()
+        node_counter = 0
+        clique_node_lists = []
+
+        for size in clique_sizes:
+            nodes = list(range(node_counter, node_counter + size))
+            G.add_nodes_from(nodes)
+            G.add_edges_from(itertools.combinations(nodes, 2))  # fully connect clique
+            clique_node_lists.append(nodes)
+            node_counter += size
+
+        # Connect each clique to the next to form a ring (1 edge per pair)
+        for i in range(num_cliques):
+            a = clique_node_lists[i][0]
+            b = clique_node_lists[(i + 1) % num_cliques][0]
+            G.add_edge(a, b)
+
+        return G, clique_sizes  # clique_sizes probably not necessary
+
     def get_action_payoff(self, theory_choice):
         """Get the payoff for a given theory choice"""
         if theory_choice == "old":
             return self.old_theory_payoff
-        
+
         # For new theory, payoff depends on which theory is actually true
         payoff_idx = 1 if self.true_theory == "new" else 0
         return self.new_theory_payoffs[payoff_idx]
@@ -82,12 +165,12 @@ class ScienceNetworkModel(Model):
     def step(self):
         self.step_count += 1
         self.schedule.step()
-        
+
         # Check if the simulation has converged after each step
         if not self.converged and self.convergence_status():
             self.converged = True
             self.convergence_step = self.step_count
-    
+
     def convergence_status(self):
         """
         According to Zollman's paper, a population has finished learning if one of two conditions are met:
@@ -96,28 +179,28 @@ class ScienceNetworkModel(Model):
         """
         actions = [agent.current_choice for agent in self.schedule.agents]
         beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
-        
-        # Condition 1: Everyone using old theory 
+
+        # Condition 1: Everyone using old theory
         if all(action == "old" for action in actions):
             return True
-        
-        # Condition 2: Everyone strongly believes in new theory 
+
+        # Condition 2: Everyone strongly believes in new theory
         if all(b > 0.9999 for b in beliefs):
             return True
-            
+
         return False
 
     def get_convergence_info(self):
         if self.converged:
             actions = [agent.current_choice for agent in self.schedule.agents]
             beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
-            
+
             # Check convergence type
             if all(action == "old" for action in actions):
                 theory = "Old Theory"
             elif all(b > 0.9999 for b in beliefs):
                 theory = "Correct Theory" if self.true_theory == "new" else "Incorrect Theory"
-            
+
             return {
                 'converged': True,
                 'step': self.convergence_step,
