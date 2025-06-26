@@ -11,9 +11,7 @@ from pyvis.network import Network
 import tempfile
 import streamlit.components.v1 as components
 from src.run_model_utils import run_simulations_until_convergence
-from src.run_sensitivity_tools import run_full_sensitivity_analysis
-from src.plot_sensitivity_results import plot_all_metrics, plot_all_comparisons
-from src.single_run_analysis import analyze_and_plot_results, load_simulation_results, analyze_convergence_stats
+
 from src.scientists import ScientistAgent
 from src.super_scientist import SuperScientistAgent
 import plotly.graph_objects as go
@@ -23,6 +21,7 @@ from streamlit_elements import elements, mui
 import json
 from pathlib import Path
 import seaborn as sns
+from src.zollman_analysis import run_zollman_experiment, plot_zollman_figures, load_results
 
 # Set the plotting style
 sns_colors = sns.color_palette("Set2", 8)
@@ -148,35 +147,38 @@ def main():
         st.subheader("Analysis Type")
         analysis_type = st.radio(
             "Choose Analysis",
-            ["Regular Simulations", "Make Animation", "Sensitivity Analysis", "Zollman Analysis"],
+            ["Regular Simulations", "Make Animation", "Zollman Analysis"],
             help="Choose the type of analysis to run"
         )
         
-        if analysis_type == "Sensitivity Analysis":
-            create_plots = st.checkbox("Create Plots", value=True)
-            num_trajectories = st.number_input(
-                "Number of Trajectories",
-                min_value=1,
-                max_value=5000,
-                value=715
+        # Add Zollman mode selection right after analysis type if Zollman is selected
+        zollman_mode = None
+        if analysis_type == "Zollman Analysis":
+            zollman_mode = st.radio(
+                "Zollman Analysis Mode",
+                ["Run new simulations", "Plot existing results"],
+                help="Choose whether to run new simulations or plot existing results"
             )
-        elif analysis_type == "Zollman Analysis":
-            create_plots = st.checkbox("Create Plots", value=True)
         
         # Network Parameters
         st.subheader("Network Parameters")
-        num_agents = st.number_input("Number of Scientists", min_value=2, max_value=50, value=6)
         
-        # Adjust network type options based on analysis type
-        network_options = ["cycle", "wheel", "complete"]
-        if analysis_type not in ["Zollman Analysis", "Make Animation"]:
-            network_options.append("custom")
-            
-        network_type = st.selectbox(
-            "Network Type",
-            network_options,
-            index=0
-        )
+        # Only show number of scientists if not doing Zollman analysis
+        if analysis_type != "Zollman Analysis":
+            num_agents = st.number_input("Number of Scientists", min_value=2, max_value=50, value=6)
+        else:
+            num_agents = 6  # Default value, won't be used
+        
+        # Only show network type selection if not doing Zollman analysis
+        if analysis_type != "Zollman Analysis":
+            network_options = ["cycle", "wheel", "complete", "bipartite", "cliques", "custom"]
+            network_type = st.selectbox(
+                "Network Type",
+                network_options,
+                index=0
+            )
+        else:
+            network_type = "cycle"  # Default value, won't be used
         
         # Simulation Parameters (moved up)
         st.subheader("Simulation Parameters")
@@ -194,13 +196,6 @@ def main():
                 value=2000
             )
         
-        max_steps = st.number_input(
-            "Maximum Steps",
-            min_value=1,
-            max_value=10000,
-            value=1000
-        )
-        
         # Agent Parameters
         st.subheader("Agent Parameters")
         agent_type = st.selectbox(
@@ -210,67 +205,78 @@ def main():
             help="Choose between regular Scientists or Super Scientists with enhanced learning capabilities"
         )
         
-        use_noise = st.checkbox(
-            "Add Noise",
-            value=False,
-            help="Enable noise in the agents' observations"
-        )
-        
-        if use_noise:
-            noise_value = st.number_input(
-                "Noise Value",
+        if analysis_type != "Zollman Analysis":
+            use_noise = st.checkbox(
+                "Add Noise",
+                value=False,
+                help="Enable noise in the agents' observations"
+            )
+            
+            if use_noise:
+                noise_value = st.number_input(
+                    "Noise Value",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.1,
+                    step=0.05,
+                    help="Standard deviation of the Gaussian noise added to observations"
+                )
+            else:
+                noise_value = 0.0
+            
+            # Theory Parameters
+            st.subheader("Theory Parameters")
+            old_theory_payoff = st.number_input(
+                "Old Theory Payoff",
                 min_value=0.0,
                 max_value=1.0,
-                value=0.1,
-                step=0.05,
-                help="Standard deviation of the Gaussian noise added to observations"
+                value=0.5,
+                step=0.1
+            )
+            new_theory_payoff_low = st.number_input(
+                "New Theory Payoff (Old True)",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.4,
+                step=0.1
+            )
+            new_theory_payoff_high = st.number_input(
+                "New Theory Payoff (New True)",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.6,
+                step=0.1
+            )
+            true_theory = st.selectbox(
+                "True Theory",
+                ["old", "new"],
+                index=1
+            )
+            
+            belief_strength_low = st.number_input(
+                "Belief Strength (Min)",
+                min_value=0.0,
+                max_value=10.0,
+                value=0.5,
+                step=0.1
+            )
+            belief_strength_high = st.number_input(
+                "Belief Strength (Max)",
+                min_value=0.0,
+                max_value=10.0,
+                value=2.0,
+                step=0.1
             )
         else:
+            # Set default values for Zollman analysis
+            use_noise = False
             noise_value = 0.0
-        
-        # Theory Parameters
-        st.subheader("Theory Parameters")
-        old_theory_payoff = st.number_input(
-            "Old Theory Payoff",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.5,
-            step=0.1
-        )
-        new_theory_payoff_low = st.number_input(
-            "New Theory Payoff (Old True)",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.4,
-            step=0.1
-        )
-        new_theory_payoff_high = st.number_input(
-            "New Theory Payoff (New True)",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.6,
-            step=0.1
-        )
-        true_theory = st.selectbox(
-            "True Theory",
-            ["old", "new"],
-            index=1
-        )
-        
-        belief_strength_low = st.number_input(
-            "Belief Strength (Min)",
-            min_value=0.0,
-            max_value=10.0,
-            value=0.5,
-            step=0.1
-        )
-        belief_strength_high = st.number_input(
-            "Belief Strength (Max)",
-            min_value=0.0,
-            max_value=10.0,
-            value=2.0,
-            step=0.1
-        )
+            old_theory_payoff = 0.5
+            new_theory_payoff_low = 0.4
+            new_theory_payoff_high = 0.6
+            true_theory = "new"
+            belief_strength_low = 0.5
+            belief_strength_high = 2.0
 
     # Main area
     custom_network = None
@@ -305,7 +311,6 @@ def main():
                 'true_theory': true_theory,
                 'belief_strength_range': (belief_strength_low, belief_strength_high),
                 'use_animation': use_animation,
-                'max_steps': max_steps,
                 'animation_params': {
                     'num_frames': 30,
                     'interval': 500,
@@ -325,7 +330,7 @@ def main():
                     agent_class=ScientistAgent if agent_type == "ScientistAgent" else SuperScientistAgent,
                     **params
                 )
-                
+
                 # Load and analyze results
                 try:
                     # Convert results to DataFrame if it's a list
@@ -420,47 +425,66 @@ def main():
                         st.plotly_chart(fig_steps, use_container_width=True)
                     with col4:
                         st.plotly_chart(fig_consensus, use_container_width=True)
-                        
+                    
                 except Exception as e:
                     st.error(f"An error occurred while analyzing results: {str(e)}")
+            
+            elif analysis_type == "Make Animation":
+                # Run single simulation with animation
+                params['use_animation'] = True
+                params['num_simulations'] = 1
                 
-            elif analysis_type == "Sensitivity Analysis":
-                st.write("=== Running Sensitivity Analysis ===")
-                run_full_sensitivity_analysis(
-                    num_trajectories=num_trajectories,
-                    run_single=True,
-                    run_comparison=True
+                # Run simulation and get video path
+                video_path = run_simulations_until_convergence(
+                    agent_class=ScientistAgent if agent_type == "ScientistAgent" else SuperScientistAgent,
+                    **params
                 )
                 
-                if create_plots:
-                    st.write("=== Creating Sensitivity Analysis Plots ===")
-                    for net_type in ['cycle', 'wheel', 'complete']:
-                        plot_all_metrics(network_type=net_type, 
-                                       num_trajectories=num_trajectories)
-                    
-                    plot_all_comparisons(num_trajectories=num_trajectories)
-                    st.success("All plots have been saved to the analysis_plots directory!")
+                # Display the generated video in a smaller size
+                if os.path.exists(video_path):
+                    st.subheader("Simulation Animation")
+                    col1, col2, col3 = st.columns([1,2,1])
+                    with col2:
+                        st.video(video_path)
+                else:
+                    st.error("Animation file was not generated successfully.")
             
             elif analysis_type == "Zollman Analysis":
                 st.write("=== Running Zollman Analysis ===")
-                from src.zollman_analysis import run_zollman_analysis
                 
-                results = run_zollman_analysis(
-                    num_simulations=num_simulations,
-                    num_agents=num_agents,
-                    network_type=network_type,
-                    agent_type=agent_type,
-                    use_noise=use_noise,
-                    noise_value=noise_value,
-                    custom_network=custom_network if network_type == "custom" else None
+                # Check if results already exist
+                agent_class = ScientistAgent if agent_type == "ScientistAgent" else SuperScientistAgent
+                
+                if zollman_mode == "Run new simulations":
+                    print(f"Running Zollman experiment")
+                    results = run_zollman_experiment(
+                        agent_class=agent_class,
+                        num_simulations=num_simulations,
+                        network_sizes=[4, 6, 8, 10, 12]
+                    )
+                else:
+                    # Try to load existing results
+                    results = load_results(agent_class=agent_class, num_simulations=num_simulations)
+                    if results is None:
+                        st.error(f"No existing results found for {agent_class.__name__} with {num_simulations} simulations. Please run new simulations first.")
+                        st.stop()
+                    print("Loading existing results")
+                
+                # Create and display plots side by side
+                st.write("=== Zollman Analysis Plots ===")
+                learning_fig, speed_fig = plot_zollman_figures(
+                    num_simulations, 
+                    agent_class=agent_class
                 )
                 
-                if create_plots:
-                    st.write("=== Creating Zollman Analysis Plots ===")
+                # Display plots side by side
+                col1, col2 = st.columns(2)
+                with col1:
                     st.write("Learning Results:")
-                    st.pyplot(results['learning_plot'])
+                    st.pyplot(learning_fig, use_container_width=True)
+                with col2:
                     st.write("Speed Results:")
-                    st.pyplot(results['speed_plot'])
+                    st.pyplot(speed_fig, use_container_width=True)
 
 if __name__ == "__main__":
     main() 

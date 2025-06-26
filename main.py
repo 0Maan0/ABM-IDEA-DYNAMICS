@@ -25,20 +25,19 @@ if __name__ == "__main__":
     
     # Number of simulations to run
     num_simulations = 1
-    show_final_state = False  # True if you want to see the final state of the simulation (to check convergence)
     
     # Parameters for the animation 
-    # Runs until convergence but here you can say if you want to use animation or not
-    use_animation = True # if true it will show the proces of one simulation
     max_steps = 1000   
     animation_params = {
-        'num_frames': 30,
+        'num_frames': max_steps,
         'interval': 500,
         'steps_per_frame': 1
     }
     
     # Choose what code to run
-    run_regular_simulations = True #True  
+    run_regular_simulations = True #True 
+    # if true choose if you want to make an animation of 1 normakl simulation:
+    use_animation = True 
     run_sensitivity_analysis = False #True
     create_sensitivity_plots = False #True
     
@@ -59,19 +58,19 @@ if __name__ == "__main__":
             belief_strength_range=belief_strength_range,
             use_animation=use_animation,
             max_steps=max_steps,
-            animation_params=animation_params,
-            show_final_state=show_final_state
+            animation_params=animation_params
         )
         
-        # Analyze and plot the results
-        print("\n=== Analyzing Simulation Results ===")
-        analyze_and_plot_results(
-            network_type=network_type,
-            num_agents=num_agents,
-            num_simulations=num_simulations,
-            belief_range=belief_strength_range,
-            agent_type=agent_class.__name__,
-        )
+        if use_animation is False:
+            # Analyze and plot the results
+            print("\n=== Analyzing Simulation Results ===")
+            analyze_and_plot_results(
+                network_type=network_type,
+                num_agents=num_agents,
+                num_simulations=num_simulations,
+                belief_range=belief_strength_range,
+                agent_type=agent_class.__name__,
+            )
     
     if run_sensitivity_analysis:
         print("\n=== Running Sensitivity Analysis ===")

@@ -89,8 +89,8 @@ class ScienceNetworkModel(Model):
             return G
         elif isinstance(network_type, nx.Graph):
             # Custom network
-            if network_type.number_of_nodes() != self.num_agents:
-                raise ValueError("Custom network must have the same number of nodes as num_agents")
+            # if network_type.number_of_nodes() != self.num_agents:
+            #     raise ValueError("Custom network must have the same number of nodes as num_agents")
             return network_type
         else:
             raise ValueError("Unknown network type or invalid custom network")
