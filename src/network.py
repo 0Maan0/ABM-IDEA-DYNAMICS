@@ -32,11 +32,7 @@ class ScienceNetworkModel(Model):
     ):
         super().__init__()
         self.num_agents = num_agents
-        self.network_type = network_type
-        self.old_theory_payoff = old_theory_payoff
-        self.new_theory_payoffs = new_theory_payoffs
-        self.true_theory = true_theory
-        self.belief_strength_range = belief_strength_range
+        self.true_probs = true_probs
         self.schedule = SimultaneousActivation(self)
         self.network = self._create_network(network_type)
         self.step_count = 0

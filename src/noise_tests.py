@@ -7,6 +7,8 @@ import numpy as np
 from src.run_model_utils import run_simulations_until_convergence
 from src.super_scientist import SuperScientistAgent
 from src.scientists import ScientistAgent
+from src.network import ScienceNetworkModel
+
 
 def run_noise_experiment(
     network_sizes=[2, 4, 6, 8, 10, 12],
@@ -20,7 +22,9 @@ def run_noise_experiment(
     """
     results = {}
 
-    for network_type in ['cycle', 'wheel', 'complete']:
+    # network_types = ScienceNetworkModel.network_types
+    network_types = ["cycle", "wheel", "complete"]  # For now, only these networks
+    for network_type in network_types:
         results[network_type] = {}
 
         for noise_std in noise_levels:
@@ -57,12 +61,12 @@ def run_noise_experiment(
 
                 print(f"Success rate: {success_rate:.2%}")
                 print(f"Average steps to success: {avg_steps:.1f} steps")
-                
+
                 # Verify all runs converged
                 if len(df) != num_simulations:
-                    print(f"Warning: {num_simulations - len(df)}" 
+                    print(f"Warning: {num_simulations - len(df)}"
                           " runs did not converge!")
-                
+
     return results
 
 
@@ -114,15 +118,15 @@ def plot_success_vs_size_per_network(
 
         for i, noise in enumerate(noise_levels):
             success_rates = [
-                results[network_type][noise][size]['success_rate'] 
+                results[network_type][noise][size]['success_rate']
                 for size in sizes
                 ]
-            
+
             plt.plot(
-                sizes, 
-                success_rates, 
-                marker='o', 
-                label=f"Noise = {noise}", 
+                sizes,
+                success_rates,
+                marker='o',
+                label=f"Noise = {noise}",
                 color=colors[i]
                 )
 
@@ -133,7 +137,7 @@ def plot_success_vs_size_per_network(
         plt.grid(True)
         plt.ylim(0, 1.05)
         plt.legend()
-        plt.savefig(f"{save_dir}/success_vs_size_{network_type}.pdf", 
+        plt.savefig(f"{save_dir}/success_vs_size_{network_type}.pdf",
                     format="pdf", bbox_inches="tight")
         plt.close()
         print(f"Plot saved to {save_dir}/success_vs_size_{network_type}.pdf")
@@ -169,9 +173,9 @@ def save_noise_results_as_csv(results, num_simulations, filename_prefix="noise_r
 
 
 if __name__ == "__main__":
-    noise_levels = [0.0, 0.1, 0.2, 0.3, 0.5, 0.8]
-    network_sizes = [2, 4, 6, 8, 10, 12]
-    num_simulations = 1000
+    noise_levels = [0.3, 0.7]
+    network_sizes = [2, 4]
+    num_simulations = 100
 
     results = run_noise_experiment(
         network_sizes=network_sizes,
@@ -179,8 +183,7 @@ if __name__ == "__main__":
         num_simulations=num_simulations
     )
 
-    # This does not 
+    # This does not
     save_noise_results_as_csv(results, num_simulations)
-    plot_success_vs_size_per_network(results, 
+    plot_success_vs_size_per_network(results,
                                      save_dir="analysis_plots/noise_vs_size")
-    
