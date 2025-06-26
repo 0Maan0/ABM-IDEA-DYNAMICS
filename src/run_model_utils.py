@@ -62,13 +62,12 @@ def animate_model(model, num_frames=200, interval=500, steps_per_frame=1, max_st
         
     anim = animation.FuncAnimation(fig, update, frames=actual_frames, interval=interval, repeat=False)
     
-    # Only save animation as PDF if requested
-    if hasattr(model, 'save_plots') and model.save_plots:
-        os.makedirs("analysis_plots/animations", exist_ok=True)
-        anim.save(f"analysis_plots/animations/model_evolution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf", 
-                 writer='pdf', dpi=300)
-    else:
-        plt.show()
+    os.makedirs("figures/animations", exist_ok=True)
+    video_path = f"figures/animations/model_evolution_{model.network_type}_{model.num_agents}_{model.agent_class.__name__}.mkv"
+    anim.save(video_path, writer="ffmpeg", dpi=300)
+    plt.close()
+    return video_path
+
 
 def run_simulation_until_convergence(model, max_steps=1000):
     """
@@ -85,11 +84,6 @@ def run_simulation_until_convergence(model, max_steps=1000):
     
     return conv_info
 
-def show_final_state(model):
-    # just to show the final state of the model so 
-    # we dont need to model all iterations but you can check convergence
-    animate_model(model, num_frames=1, interval=1000, steps_per_frame=1)
-
 def create_and_run_model(
     agent_class=ScientistAgent,  # Choice: ScientistAgent or SuperScientistAgent
     num_agents=10, 
@@ -101,10 +95,8 @@ def create_and_run_model(
     use_animation=False,
     max_steps=1000,
     animation_params=None,
-    show_final_state=False,
     noise="off",
     noise_std=0.0):
-
 
     model = ScienceNetworkModel(
         agent_class=agent_class,  
@@ -127,11 +119,9 @@ def create_and_run_model(
         if animation_params:
             default_params.update(animation_params)
         
-        animate_model(model, max_steps=max_steps, **default_params)
+        return animate_model(model, max_steps=max_steps, **default_params)
     else:
         conv_info = run_simulation_until_convergence(model, max_steps)
-        if show_final_state:
-            show_final_state(model)
         return conv_info
 
 def save_results_as_csv(results, filename="test_results.csv"):
@@ -187,45 +177,30 @@ def run_simulations_until_convergence(num_simulations=100, num_agents=10, networ
                                      old_theory_payoff=0.5, new_theory_payoffs=(0.4, 0.6),
                                      true_theory="new", belief_strength_range=(0.5, 2.0),
                                      use_animation=False, max_steps=1000, noise="off", noise_std=0.0, 
-                                     animation_params=None, show_final_state=False,
+                                     animation_params=None,
                                      agent_class=ScientistAgent, custom_graph=None):
     """
     The most important function of this module that you can call on in the main.py to run multiple simulations
     """
-    # Can't parallelize if using animation or showing final state
-    if use_animation or show_final_state:
-        all_results = []
-        for i in range(num_simulations):
-            print(f"==> Running simulation {i + 1} with {num_agents} agents on a {network_type} network :) <==\n")
-            result = {}
-            result['simulation_id'] = i + 1
-            result['agent_class'] = agent_class.__name__
-            result['network_type'] = network_type
-            # Create and run the model
-            conv_info = create_and_run_model(
-                agent_class=agent_class,  
-                num_agents=num_agents,
-                network_type=network_type if custom_graph is None else custom_graph,
-                old_theory_payoff=old_theory_payoff,
-                new_theory_payoffs=new_theory_payoffs,
-                true_theory=true_theory,
-                belief_strength_range=belief_strength_range,
-                use_animation=use_animation,
-                max_steps=max_steps,
-                animation_params=animation_params,
-                show_final_state=show_final_state,
-                noise=noise,
-                noise_std=noise_std
-            )
-            
-            result.update(conv_info)
-            result['num_agents'] = num_agents
-            result['old_theory_payoff'] = old_theory_payoff
-            result['new_theory_payoff_if_old_true'] = new_theory_payoffs[0]
-            result['new_theory_payoff_if_new_true'] = new_theory_payoffs[1]
-            result['true_theory'] = true_theory
-            result['belief_strength_range'] = belief_strength_range
-            all_results.append(result)
+    # Can't parallelize if using animation
+    if use_animation:
+        print(f"==> Running 1  simulation with {num_agents} agents on a {network_type} network :) <==\n")
+        # Create and run the model
+        animation = create_and_run_model(
+            agent_class=agent_class,  
+            num_agents=num_agents,
+            network_type=network_type if custom_graph is None else custom_graph,
+            old_theory_payoff=old_theory_payoff,
+            new_theory_payoffs=new_theory_payoffs,
+            true_theory=true_theory,
+            belief_strength_range=belief_strength_range,
+            use_animation=use_animation,
+            max_steps=max_steps,
+            animation_params=animation_params,
+            noise=noise,
+            noise_std=noise_std
+        )
+        return animation
     else:
         # Prepare parameters for parallel processing
         params = {

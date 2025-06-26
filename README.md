@@ -66,7 +66,6 @@ belief_strength_range = (0.5, 2.0) # Range affecting how resistant scientists ar
 
 # Simulation settings
 num_simulations = 2000           # How many times to run the simulation
-show_final_state = False         # Whether to show the final state of the simulation (to check it has converged) 
 use_animation = True             # Whether to animate one simulation run
 max_steps = 1000                 # Maximum steps per simulation
 

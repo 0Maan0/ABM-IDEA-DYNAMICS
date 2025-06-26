@@ -11,7 +11,7 @@ from src.network import ScienceNetworkModel
 
 
 def run_noise_experiment(
-    network_sizes=[2, 4, 6, 8, 10, 12],
+    network_sizes=[4, 6, 8, 10, 12],
     noise_levels=[0.0, 0.1, 0.2, 0.3],
     num_simulations=1000,
     max_steps=2000
