@@ -165,7 +165,7 @@ class SensitivityAnalyzer:
         """
         Compare sensitivity across different network types
         """
-        networks = ['cycle', 'wheel', 'complete']
+        networks = ['cycle', 'wheel', 'complete', 'bipartite', 'cliques']
         results = {}
         timestamps = {}
         

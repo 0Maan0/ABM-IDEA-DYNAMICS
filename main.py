@@ -35,14 +35,14 @@ if __name__ == "__main__":
     }
     
     # Choose what code to run
-    run_regular_simulations = True #True 
+    run_regular_simulations = False #True #True 
     # if true choose if you want to make an animation of 1 normakl simulation:
-    use_animation = True 
-    run_sensitivity_analysis = False #True
-    create_sensitivity_plots = False #True
+    use_animation = False #True 
+    run_sensitivity_analysis = True
+    create_sensitivity_plots = True
     
     # Sensitivity analysis parameters
-    num_trajectories = 4 # Will generate about 715 * 7 = 5005 parameter combinations (we should do 5k)
+    num_trajectories = 715 # Will generate about 715 * 7 = 5005 parameter combinations (we should do 5k)
     
     if run_regular_simulations:
         print("\n=== Running Regular Simulations ===")
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     if create_sensitivity_plots:
         print("\n=== Creating Sensitivity Analysis Plots ===")
         # Create plots for each network type
-        for net_type in ['cycle', 'wheel', 'complete']:
+        for net_type in ['cycle', 'wheel', 'complete', 'bipartite', 'cliques']:
             plot_all_metrics(network_type=net_type, num_trajectories=num_trajectories)
             
         # Create comparison plots across network types
