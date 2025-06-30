@@ -117,7 +117,7 @@ class ScientistAgent(Agent):
 
         Args:
             neighbor (ScientistAgent): The neighbor agent to learn from.
-    """
+        """
         # Update based on neighbor's current round results only
         if neighbor.current_old_theory_result is not None:
             self.update_belief(neighbor.current_old_theory_result, "old")
