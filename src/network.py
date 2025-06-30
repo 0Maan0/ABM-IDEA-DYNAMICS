@@ -1,3 +1,15 @@
+"""
+University: University of Amsterdam
+Course: Agent Based Modelling
+Authors: Margarita Petrova; Pjotr Piet; Maan Scipio; Fred Loth;
+UvaNetID's: 15794717; 12714933; 15899039; 12016926
+
+Description: This script defines the `ScienceNetworkModel` class, which
+simulates the spread of a new scientific theory in a network of scientists. The
+model and the step function are based on the main paper by Zollman. A reference
+to this paper is provided in the `README.md` file.
+"""
+
 from mesa import Model
 from mesa.time import SimultaneousActivation
 import networkx as nx
