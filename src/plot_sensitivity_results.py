@@ -77,7 +77,7 @@ def plot_single_analysis(network_type, metric, timestamp=None, save=True, num_tr
         plt.close()
     return fig
 
-def plot_network_comparison(metric, network_types=['cycle', 'wheel', 'complete'], 
+def plot_network_comparison(metric, network_types=['cycle', 'wheel', 'complete', 'bipartite', 'cliques'], 
                           timestamp=None, save=True, num_trajectories=None):
     """
     Create comparison plots across different network types
@@ -142,7 +142,7 @@ def plot_all_comparisons(timestamp=None, num_trajectories=None):
     """
     Create comparison plots for all available metrics across all network types
     """
-    network_types = ['cycle', 'wheel', 'complete']
+    network_types = ['cycle', 'wheel', 'complete', 'bipartite', 'cliques']
     all_metrics = set()
     
     # Collect metrics from all network directories

@@ -75,7 +75,7 @@ def run_full_sensitivity_analysis(num_trajectories=10, run_single=True, run_comp
     if run_single:
         # Run analysis for each network type individually
         single_results = {}
-        for network_type in ['cycle', 'wheel', 'complete']:
+        for network_type in ['bipartite', 'cliques']:
             results, _ = run_sensitivity_analysis(network_type, num_trajectories)
             single_results[network_type] = results
     
@@ -89,7 +89,7 @@ def run_full_sensitivity_analysis(num_trajectories=10, run_single=True, run_comp
             analyzer = SensitivityAnalyzer()
             for metric in ['convergence_time', 'correct_theory_rate', 'old_theory_rate']:
                 metric_results = {}
-                for network_type in ['cycle', 'wheel', 'complete']:
+                for network_type in ['bipartite', 'cliques']:
                     Si, _ = analyzer.morris_analysis(
                         num_trajectories=num_trajectories,
                         network_type=network_type,
