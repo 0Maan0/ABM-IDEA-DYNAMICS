@@ -1,17 +1,20 @@
+"""
+University: University of Amsterdam
+Course: Agent Based Modelling
+Authors: Margarita Petrova; Pjotr Piet; Maan Scipio; Fred Loth;
+UvaNetID's: 15794717; 12714933; 15899039; 12016926
+
+Description: This file contains the implementation of the ScientistAgent class,
+which represents a scientist in Zollman's (2007) model of epistemic communities.
+The agent has beliefs about the truth of theories, chooses theories based on
+expected utility, and updates beliefs based on experimental results and neighbor
+evidence. This is the main agent class used in the model.
+"""
+
 from mesa import Agent, Model
-from mesa.time import SimultaneousActivation
-import networkx as nx
 import random
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.patches import Patch
-import seaborn as sns
-import pandas as pd
-import os
-from datetime import datetime
-from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
+
 
 class ScientistAgent(Agent):
     """
@@ -25,9 +28,10 @@ class ScientistAgent(Agent):
         super().__init__(unique_id, model)
 
         self.belief_in_new_theory = initial_belief  # Start with optimistic belief in new theory
-        self.belief_strength = belief_strength # Belief strength parameter ==> if this value is higher, the scientist is more resistant to change
+        # Belief strength parameter ==> if this value is higher, the scientist is more resistant to change
+        self.belief_strength = belief_strength
 
-        self.current_choice = self._choose_theory() # The current theory choice ("old" or "new")
+        self.current_choice = self._choose_theory()  # The current theory choice ("old" or "new")
 
         # Current round's experimental results
         self.current_old_theory_result = None
@@ -40,6 +44,9 @@ class ScientistAgent(Agent):
         - Old theory has fixed success probability of 0.5
         - For new theory, expected success probability is:
           P(success) = P(success|New better)*P(New better) + P(success|New worse)*P(New worse)
+
+        Returns:
+            str: "new" if new theory is expected to succeed more, "old" otherwise.
         """
         # Old theory has fixed success probability
         old_theory_prob = self.model.old_theory_payoff  # 0.5
@@ -52,7 +59,7 @@ class ScientistAgent(Agent):
             noise = 0.0
 
         # For new theory, calculate expected probability of success
-        p_new_better = min(1, max(0, self.belief_in_new_theory + noise)) # Clip values
+        p_new_better = min(1, max(0, self.belief_in_new_theory + noise))  # Clip values
         p_success_if_better = self.model.new_theory_payoffs[1]  # 0.4
         p_success_if_worse = self.model.new_theory_payoffs[0]   # 0.6
 
@@ -65,7 +72,13 @@ class ScientistAgent(Agent):
 
     def update_belief(self, success, theory):
         """
-        Bayesian update based on experimental result and which theory was tested
+        Bayesian update based on experimental result and which theory was
+        tested.
+
+        Args:
+            success (bool): True if experiment was successful, False otherwise.
+            theory (str): "new" if new theory was tested, "old" if old theory
+            was tested.
         """
         # Get probabilities for each theory
         p_success_if_new = self.model.new_theory_payoffs[1]
@@ -100,7 +113,11 @@ class ScientistAgent(Agent):
         self.belief_in_new_theory = numerator / denominator
 
     def incorporate_neighbor_evidence(self, neighbor):
-        """Learn from neighbor's current round experimental results only"""
+        """Learn from neighbor's current round experimental results only.
+
+        Args:
+            neighbor (ScientistAgent): The neighbor agent to learn from.
+        """
         # Update based on neighbor's current round results only
         if neighbor.current_old_theory_result is not None:
             self.update_belief(neighbor.current_old_theory_result, "old")

@@ -1,10 +1,21 @@
-from mesa import Agent, Model
+"""
+University: University of Amsterdam
+Course: Agent Based Modelling
+Authors: Margarita Petrova; Pjotr Piet; Maan Scipio; Fred Loth;
+UvaNetID's: 15794717; 12714933; 15899039; 12016926
+
+Description: This script defines the `ScienceNetworkModel` class, which
+simulates the spread of a new scientific theory in a network of scientists. The
+model and the step function are based on the main paper by Zollman. A reference
+to this paper is provided in the `README.md` file.
+"""
+
+from mesa import Model
 from mesa.time import SimultaneousActivation
 import networkx as nx
 import random
 from src.scientists import ScientistAgent
 from src.super_scientist import SuperScientistAgent
-import numpy as np
 import itertools
 import math
 
@@ -12,7 +23,14 @@ import math
 class ScienceNetworkModel(Model):
     """
     The main model for simulating the spread of a new scientific theory in a network.
-    For now you can choose between a cycle, wheel and complete network.
+    The possible network types are defined in a list of `network_types`:
+    - "cycle": A cycle graph where each node is connected to two others in a ring
+    - "wheel": A wheel graph with a central hub connected to all other nodes
+    - "complete": A complete graph where every node is connected to every other node
+    - "bipartite": A complete bipartite graph with two sets of nodes
+    - "cliques": A ring of cliques where nodes are grouped into fully connected sub
+    - "custom": A custom network provided as a NetworkX graph object, maily used in
+    the
     """
 
     # Define network constants
@@ -44,13 +62,10 @@ class ScienceNetworkModel(Model):
         self.step_count = 0
         self.converged = False
         self.influence_scaling = "probit"
-        self.agent_class = agent_class  # Allow for different agent types (e.g., ScientistAgent or SuperScientistAgent)
+        self.agent_class = agent_class  # Allow for different agent types (e.g. ScientistAgent or SuperScientistAgent)
         self.noise_active = noise
         self.noise_loc = noise_loc
         self.noise_std = noise_std
-
-        # Start scientists with random beliefs about which theory is true
-        # TODO: make different initial conditions for this?
 
         # Create agents with initial beliefs and belief strength
         for i in range(num_agents):
@@ -60,18 +75,17 @@ class ScienceNetworkModel(Model):
             # Make a random belief strength within the range to determine resistance to change
             belief_strength = random.uniform(*belief_strength_range)
 
-
             if self.agent_class == SuperScientistAgent:
                 # Set h_index value - could be fixed or random
                 h_index_value = random.uniform(0.0, 1.0)
                 agent = self.agent_class(i, self,
-                                        initial_belief=initial_belief,
-                                        belief_strength=belief_strength,
-                                        h_index=h_index_value)
+                                         initial_belief=initial_belief,
+                                         belief_strength=belief_strength,
+                                         h_index=h_index_value)
             else:
                 agent = self.agent_class(i, self,
-                                        initial_belief=initial_belief,
-                                        belief_strength=belief_strength)
+                                         initial_belief=initial_belief,
+                                         belief_strength=belief_strength)
             self.schedule.add(agent)
 
     def _create_network(self, network_type):
@@ -100,6 +114,12 @@ class ScienceNetworkModel(Model):
         """
         Create a complete bipartite graph with `num_nodes` nodes split as evenly as possible
         between the two sets.
+
+        Args:
+        - num_nodes (int): Total number of nodes in the bipartite graph.
+
+        Returns:
+        - G (networkx.Graph): A complete bipartite graph with two sets of nodes.
         """
         if num_nodes < 2:
             raise ValueError("At least 2 nodes are required to form a bipartite graph.")
@@ -121,6 +141,13 @@ class ScienceNetworkModel(Model):
         - Number of cliques = floor(sqrt(num_nodes))
         - Nodes per clique = base size + (1 if extra node assigned)
         - Connect first node of each clique to next to form a ring
+
+        Args:
+        - num_nodes (int): Total number of nodes in the network.
+
+        Returns:
+        - G (networkx.Graph): A ring of cliques graph.
+        - clique_sizes (list): Sizes of each clique in the ring.
         """
         if num_nodes < 2:
             raise ValueError("At least 2 nodes are required.")
@@ -128,7 +155,7 @@ class ScienceNetworkModel(Model):
         if num_nodes == 2:
             # Just a single edge between node 0 and 1
             G = nx.Graph()
-            G.add_nodes_from([0,1])
+            G.add_nodes_from([0, 1])
             G.add_edge(0, 1)
             clique_sizes = [2]
             return G, clique_sizes
@@ -164,10 +191,12 @@ class ScienceNetworkModel(Model):
             b = clique_node_lists[(i + 1) % num_cliques][0]
             G.add_edge(a, b)
 
-        return G, clique_sizes  # clique_sizes probably not necessary
+        return G, clique_sizes
 
     def get_action_payoff(self, theory_choice):
-        """Get the payoff for a given theory choice"""
+        """Get the payoff for a given theory choice
+
+        Args:"""
         if theory_choice == "old":
             return self.old_theory_payoff
 
@@ -189,6 +218,9 @@ class ScienceNetworkModel(Model):
         According to Zollman's paper, a population has finished learning if one of two conditions are met:
         1. Every agent takes action A1 (old theory) ==> thus no new information can change their minds
         2. Every agent believes in phi2 (new theory) with probability > 0.9999
+
+        Returns:
+        bool: True if the population has converged, False otherwise.
         """
         actions = [agent.current_choice for agent in self.schedule.agents]
         beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
@@ -204,6 +236,17 @@ class ScienceNetworkModel(Model):
         return False
 
     def get_convergence_info(self):
+        """
+        Get information about the convergence status of the model.
+
+        Returns:
+        dict: A dictionary containing convergence status, step count, and theory.
+        The dictionary will have the following keys:
+            - 'converged': True if the model has converged, False otherwise.
+            - 'step': The step count at which convergence occurred, or the current step if not
+               converged.
+            - 'theory': The theory that the agents have converged on, or None if not converged.
+        """
         if self.converged:
             actions = [agent.current_choice for agent in self.schedule.agents]
             beliefs = [agent.belief_in_new_theory for agent in self.schedule.agents]
