@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # Model parameters
     num_agents = 10  # Number of scientists in the network
     network_type = "cycle"  # Options: 'cycle', 'wheel', 'complete'
-    agent_class = SuperScientistAgent  # Choose the agent type (SuperScientistAgent or ScientistAgent)
+    agent_class = ScientistAgent  # Choose the agent type (SuperScientistAgent or ScientistAgent)
 
     # Theory payoff parameters
     old_theory_payoff = 0.5  # Payoff for working with the old theory
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             plot_all_metrics(network_type=net_type, num_trajectories=num_trajectories)
 
         # Create comparison plots across network types
-        plot_all_comparisons(num_trajectories=num_trajectories)
+        # plot_all_comparisons(num_trajectories=num_trajectories)
         summary = generate_simple_summary(num_trajectories=715)
 
         print("All plots have been saved to the analysis_plots directory!")

@@ -236,13 +236,24 @@ def create_summary_table(network_types=['cycle', 'wheel', 'complete', 'bipartite
                 # Use your existing function
                 results_df = load_sensitivity_results(network_type, metric, timestamp)
                 
-                # Get top 3 parameters by mu_star
-                top_3 = results_df.nlargest(3, 'mu_star')
+                # Filter out belief strength parameters
+                filtered_df = results_df[
+                    ~results_df['parameter'].str.contains('belief_strength', case=False, na=False)
+                ]
                 
-                # Format the data
+                # Get top 3 parameters by mu_star from filtered results
+                top_3 = filtered_df.nlargest(3, 'mu_star')
+                
+                # Format the data with both mu_star and sigma
                 top_params = []
                 for i, (_, row) in enumerate(top_3.iterrows()):
-                    top_params.append(f"{row['parameter']} ({row['mu_star']:.3f})")
+                    # Handle both string and float sigma values
+                    try:
+                        sigma_val = float(row['sigma'])
+                        top_params.append(f"{row['parameter']} ({row['mu_star']:.3f}, {sigma_val:.3f})")
+                    except (ValueError, TypeError):
+                        # If sigma is a string or can't be converted, use as-is
+                        top_params.append(f"{row['parameter']} ({row['mu_star']:.3f}, {row['sigma']})")
                 
                 # Pad with empty strings if less than 3 parameters
                 while len(top_params) < 3:
@@ -271,15 +282,61 @@ def create_summary_table(network_types=['cycle', 'wheel', 'complete', 'bipartite
 
 def save_summary_table_latex(summary_df, filename="sensitivity_summary_table.tex"):
     """
-    Save the summary table as LaTeX
+    Save the summary table as LaTeX with updated caption for mu* and sigma values
     """
     latex_code = summary_df.to_latex(
         index=False,
-        caption="Top three most important parameters by network type and metric (mu* values in parentheses)",
+        caption="Top three most important parameters by network type and metric ($\\mu^*$, $\\sigma$ values in parentheses)",
         label="tab:sensitivity_summary",
         escape=False,
         column_format='llp{3cm}p{3cm}p{3cm}'  # Better column formatting for long parameter names
     )
+    
+    os.makedirs("analysis_results", exist_ok=True)
+    filepath = f"analysis_results/{filename}"
+    
+    with open(filepath, "w", encoding='utf-8') as f:
+        f.write(latex_code)
+    
+    print(f"LaTeX table saved to: {filepath}")
+    return filepath
+
+# Alternative version with improved LaTeX formatting
+def save_summary_table_latex_improved(summary_df, filename="sensitivity_summary_table.tex"):
+    """
+    Save the summary table as properly formatted LaTeX with mu* and sigma values
+    """
+    # Create custom LaTeX table with better formatting
+    latex_code = """\\begin{table*}[htbp]
+\\centering
+\\caption{Top three most important parameters by network type and metric ($\\mu^*$, $\\sigma$ values in parentheses)}
+\\label{tab:sensitivity_summary}
+\\footnotesize
+\\begin{tabular}{llp{2.8cm}p{2.8cm}p{2.8cm}}
+\\toprule
+\\textbf{Network} & \\textbf{Metric} & \\textbf{1st Most Important} & \\textbf{2nd Most Important} & \\textbf{3rd Most Important} \\\\
+\\midrule
+"""
+    
+    # Add data rows with proper grouping
+    current_network = ""
+    for _, row in summary_df.iterrows():
+        # Add separator between networks
+        if current_network != "" and current_network != row['Network']:
+            latex_code += "\\midrule\n"
+        current_network = row['Network']
+        
+        # Format parameter names (escape underscores)
+        col1 = row['1st Most Important'].replace('_', '\\_')
+        col2 = row['2nd Most Important'].replace('_', '\\_')
+        col3 = row['3rd Most Important'].replace('_', '\\_')
+        
+        latex_code += f"{row['Network']} & {row['Metric']} & {col1} & {col2} & {col3} \\\\\n"
+    
+    # Close the table
+    latex_code += """\\bottomrule
+\\end{tabular}
+\\end{table*}"""
     
     os.makedirs("analysis_results", exist_ok=True)
     filepath = f"analysis_results/{filename}"
@@ -303,8 +360,8 @@ def generate_simple_summary(num_trajectories=None):
     print("=" * 80)
     print(summary_table.to_string(index=False))
     
-    # Save as LaTeX
-    latex_file = save_summary_table_latex(summary_table)
+    # Save as LaTeX (using the improved version)
+    latex_file = save_summary_table_latex_improved(summary_table)
     
     # Also save as CSV for reference
     csv_file = "analysis_results/sensitivity_summary_table.csv"
