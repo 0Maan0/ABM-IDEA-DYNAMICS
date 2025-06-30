@@ -1,4 +1,14 @@
-""" This module tests the effects of noise on the convergence. """
+"""
+University: University of Amsterdam
+Course: Agent Based Modelling
+Authors: Margarita Petrova; Pjotr Piet; Maan Scipio; Fred Loth;
+UvaNetID's: 15794717; 12714933; 15899039; 12016926
+
+Description: This file contains the code for running noise experiments
+to test the impact of noise on the learning success of agents in different
+network types and sizes. It includes functions to run simulations,
+plot results, and save the results to CSV files.
+"""
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -6,8 +16,6 @@ import os
 import numpy as np
 from src.run_model_utils import run_simulations_until_convergence
 from src.super_scientist import SuperScientistAgent
-from src.scientists import ScientistAgent
-from src.network import ScienceNetworkModel
 
 
 def run_noise_experiment(
@@ -18,7 +26,16 @@ def run_noise_experiment(
 ):
     """
     Runs simulations for different noise levels, with network size fixed.
-    Returns dictionary with results.
+
+    Args:
+        network_sizes (list): List of network sizes to test.
+        noise_levels (list): List of noise standard deviations to test.
+        num_simulations (int): Number of simulations to run for each configuration.
+        max_steps (int): Maximum number of steps for each simulation.
+
+    Returns:
+        results (dict): Dictionary containing success rates and average steps
+                        for each network type, noise level, and size.
     """
     results = {}
 
@@ -46,7 +63,7 @@ def run_noise_experiment(
                     max_steps=max_steps,
                     noise="on",
                     noise_std=noise_std,
-                    agent_class=SuperScientistAgent # Choice: ScientistAgent OR SuperScientistAgent
+                    agent_class=SuperScientistAgent  # Choice: ScientistAgent OR SuperScientistAgent
                 )
 
                 df = pd.DataFrame(sim_results)
@@ -72,6 +89,15 @@ def run_noise_experiment(
 
 def plot_success_vs_noise(
         results, save_path="analysis_plots/noise_success_plot.pdf"):
+    """
+    Plots the success rate of learning against noise levels for different network types.
+    Each network type is represented by a different color.
+
+    Args:
+        results (dict): Dictionary containing success rates for each network type
+        and noise level.
+        save_path (str): Path to save the plot.
+    """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.figure(figsize=(8, 6))
 
@@ -104,6 +130,11 @@ def plot_success_vs_size_per_network(
     """
     Plots success rate vs network size for each network type.
     Each plot contains multiple noise levels.
+
+    Args:
+        results (dict): Dictionary containing success rates for each network type,
+                        noise level, and size.
+        save_dir (str): Directory to save the plots.
     """
     os.makedirs(save_dir, exist_ok=True)
 
@@ -147,6 +178,12 @@ def save_noise_results_as_csv(results, num_simulations, filename_prefix="noise_r
     """
     Saves noise experiment results to CSV in a format.
     Columns: network_type, noise_std, size, success_rate, avg_steps
+
+    Args:
+        results (dict): Dictionary containing success rates and average steps
+                        for each network type, noise level, and size.
+        num_simulations (int): Number of simulations run for each configuration.
+        filename_prefix (str): Prefix for the output CSV file name.
     """
     rows = []
 
