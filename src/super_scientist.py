@@ -1,17 +1,18 @@
+"""
+University: University of Amsterdam
+Course: Agent Based Modelling
+Authors: Margarita Petrova; Pjotr Piet; Maan Scipio; Fred Loth;
+UvaNetID's: 15794717; 12714933; 15899039; 12016926
+
+Description: This file contains the code for the SuperScientistAgent class,
+which implements the scientist agent similarly as in scientists.py, with added
+functionality for H-index influence scaling. For more information on the
+implementation, see the documentation in the scientists.py file.
+"""
+
 from mesa import Agent, Model
-from mesa.time import SimultaneousActivation
-import networkx as nx
 import random
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.patches import Patch
-import seaborn as sns
-import pandas as pd
-import os
-from datetime import datetime
-from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
 from scipy.stats import norm
 
 
@@ -52,13 +53,14 @@ class SuperScientistAgent(Agent):
     they want to believe/work with based on expected utility. Then their beieves are updated,
     based on experimental results.
     """
-    def __init__(self, unique_id, model, initial_belief=0.9, belief_strength=1.0,h_index=1):
+    def __init__(self, unique_id, model, initial_belief=0.9,
+                 belief_strength=1.0, h_index=1):
         super().__init__(unique_id, model)
 
         self.belief_in_new_theory = initial_belief  # Start with optimistic belief in new theory
-        self.belief_strength = belief_strength # Belief strength parameter ==> if this value is higher, the scientist is more resistant to change
-        self.h_index = h_index # H-index of the scientist, which can be used to measure their influence or reputation
-        self.current_choice = self._choose_theory() # The current theory choice ("old" or "new")
+        self.belief_strength = belief_strength  # Belief strength parameter ==> if this value is higher, the scientist is more resistant to change
+        self.h_index = h_index  # H-index of the scientist, which can be used to measure their influence or reputation
+        self.current_choice = self._choose_theory()  # The current theory choice ("old" or "new")
 
         # Current round's experimental results
         self.current_old_theory_result = None
@@ -71,6 +73,9 @@ class SuperScientistAgent(Agent):
         - Old theory has fixed success probability of 0.5
         - For new theory, expected success probability is:
           P(success) = P(success|New better)*P(New better) + P(success|New worse)*P(New worse)
+
+        Returns:
+            str: "new" if new theory is expected to succeed more, "old" otherwise.
         """
         # Old theory has fixed success probability
         old_theory_prob = self.model.old_theory_payoff  # 0.5
@@ -82,7 +87,7 @@ class SuperScientistAgent(Agent):
             noise = 0.0
 
         # For new theory, calculate expected probability of success
-        p_new_better = min(1, max(0, self.belief_in_new_theory + noise)) # Clip values
+        p_new_better = min(1, max(0, self.belief_in_new_theory + noise))  # Clip values
         p_success_if_better = self.model.new_theory_payoffs[1]  # 0.4
         p_success_if_worse = self.model.new_theory_payoffs[0]   # 0.6
 
@@ -93,9 +98,15 @@ class SuperScientistAgent(Agent):
 
         return "new" if new_theory_prob > old_theory_prob else "old"
 
-    def update_belief(self, success, theory ,weight=1.0):
+    def update_belief(self, success, theory, weight=1.0):
         """
-        Bayesian update based on experimental result
+        Bayesian update based on experimental result and which theory was
+        tested.
+
+        Args:
+            success (bool): True if experiment was successful, False otherwise.
+            theory (str): "new" if new theory was tested, "old" if old theory
+            was tested.
         """
         # Get probabilities for each theory
         p_success_if_new = self.model.new_theory_payoffs[1]
@@ -136,7 +147,11 @@ class SuperScientistAgent(Agent):
             self.belief_in_new_theory = numerator / denominator
 
     def incorporate_neighbor_evidence(self, neighbor):
-        """Learn from neighbor's current round experimental results only"""
+        """Learn from neighbor's current round experimental results only.
+
+        Args:
+            neighbor (ScientistAgent): The neighbor agent to learn from.
+        """
         # Calculate influence weight based on H-index using model's chosen scaling method
         influence_weight = self.calculate_influence_weight(neighbor.h_index)
 
@@ -150,6 +165,14 @@ class SuperScientistAgent(Agent):
         """
         Calculate influence weight based on neighbor's H-index.
         Using a probit function to model the influence.
+
+        Args:
+            neighbor_h_index (float): H-index of the neighboring scientist.
+            method (str): Method to calculate influence weight, either "probit" or "linear
+
+        Returns:
+            float: Influence weight based on the neighbor's H-index.
+            using the specified method.
         """
         if method == "probit":
             # Probit function: maps H-index to a probability-like influence weight
