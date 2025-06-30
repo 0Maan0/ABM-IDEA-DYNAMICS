@@ -15,18 +15,20 @@ from src.plot_sensitivity_results import (
     plot_single_analysis,
     plot_network_comparison,
     plot_all_metrics,
-    plot_all_comparisons
+    plot_all_comparisons,
+    generate_simple_summary
 )
 from src.super_scientist import SuperScientistAgent
 from src.scientists import ScientistAgent
 from src.single_run_analysis import analyze_and_plot_results
 
 
+
 if __name__ == "__main__":
     # Model parameters
     num_agents = 10  # Number of scientists in the network
     network_type = "cycle"  # Options: 'cycle', 'wheel', 'complete'
-    agent_class = ScientistAgent  # Choose the agent type (SuperScientistAgent or ScientistAgent)
+    agent_class = SuperScientistAgent  # Choose the agent type (SuperScientistAgent or ScientistAgent)
 
     # Theory payoff parameters
     old_theory_payoff = 0.5  # Payoff for working with the old theory
@@ -54,7 +56,7 @@ if __name__ == "__main__":
     run_regular_simulations = False  # True if you want to run the regular simulations
     # if true choose if you want to make an animation of 1 normakl simulation:
     use_animation = False  # True if you want to create an animation of a single simulation
-    run_sensitivity_analysis = True
+    run_sensitivity_analysis = False
     create_sensitivity_plots = True
 
     # Sensitivity analysis parameters
@@ -105,5 +107,7 @@ if __name__ == "__main__":
 
         # Create comparison plots across network types
         plot_all_comparisons(num_trajectories=num_trajectories)
+        summary = generate_simple_summary(num_trajectories=715)
 
         print("All plots have been saved to the analysis_plots directory!")
+        print( summary)

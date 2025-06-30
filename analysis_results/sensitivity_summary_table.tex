@@ -1,0 +1,25 @@
+\begin{table}
+\caption{Top three most important parameters by network type and metric (mu* values in parentheses)}
+\label{tab:sensitivity_summary}
+\begin{tabular}{llp{3cm}p{3cm}p{3cm}}
+\toprule
+Network & Metric & 1st Most Important & 2nd Most Important & 3rd Most Important \\
+\midrule
+Cycle & Convergence Time & belief_strength_min (107.314) & belief_strength_max (102.133) & old_theory_payoff (101.045) \\
+Cycle & Correct Theory Rate & h_index_max (0.315) & new_theory_payoff_old_true (0.314) & old_theory_payoff (0.313) \\
+Cycle & Old Theory Rate & belief_strength_min (0.309) & old_theory_payoff (0.305) & new_theory_payoff_old_true (0.294) \\
+Wheel & Convergence Time & num_agents (96.599) & belief_strength_min (95.634) & new_theory_payoff_old_true (94.697) \\
+Wheel & Correct Theory Rate & new_theory_payoff_new_true (0.312) & new_theory_payoff_old_true (0.306) & old_theory_payoff (0.291) \\
+Wheel & Old Theory Rate & num_agents (0.368) & h_index_min (0.315) & new_theory_payoff_new_true (0.308) \\
+Complete & Convergence Time & old_theory_payoff (74.015) & new_theory_payoff_old_true (73.780) & belief_strength_min (69.315) \\
+Complete & Correct Theory Rate & new_theory_payoff_new_true (0.331) & belief_strength_max (0.317) & belief_strength_min (0.310) \\
+Complete & Old Theory Rate & new_theory_payoff_new_true (0.352) & new_theory_payoff_old_true (0.310) & old_theory_payoff (0.296) \\
+Bipartite & Convergence Time & h_index_min (70.966) & old_theory_payoff (66.071) & h_index_max (64.097) \\
+Bipartite & Correct Theory Rate & num_agents (0.330) & new_theory_payoff_old_true (0.316) & h_index_min (0.314) \\
+Bipartite & Old Theory Rate & h_index_min (0.346) & new_theory_payoff_new_true (0.331) & old_theory_payoff (0.321) \\
+Cliques & Convergence Time & h_index_min (89.315) & old_theory_payoff (88.281) & belief_strength_min (86.324) \\
+Cliques & Correct Theory Rate & old_theory_payoff (0.353) & new_theory_payoff_old_true (0.328) & new_theory_payoff_new_true (0.324) \\
+Cliques & Old Theory Rate & new_theory_payoff_new_true (0.320) & h_index_min (0.310) & belief_strength_min (0.304) \\
+\bottomrule
+\end{tabular}
+\end{table}

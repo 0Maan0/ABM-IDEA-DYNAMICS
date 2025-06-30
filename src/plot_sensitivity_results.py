@@ -21,7 +21,8 @@ colors = sns.color_palette("Set2", 8)
 plt.style.use('seaborn-v0_8-paper')
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
-
+fontsize = 12
+ticksize = 10
 
 def load_sensitivity_results(network_type, metric, timestamp=None, agent_type=None):
     """
@@ -86,21 +87,21 @@ def plot_single_analysis(network_type, metric, timestamp=None, save=True, num_tr
             ax1.barh(range(len(results_df)), results_df['mu_star'],
                      alpha=0.7, color=colors[0])
             ax1.set_yticks(range(len(results_df)))
-            ax1.set_yticklabels(results_df['parameter'])
-            ax1.set_xlabel('Mean Absolute Elementary Effect')
-            ax1.set_title('Parameter Importance')
+            ax1.set_yticklabels(results_df['parameter'], fontsize=ticksize)
+            ax1.set_xlabel('Mean Absolute Elementary Effect', fontsize=fontsize)
+            ax1.set_title('Parameter Importance', fontsize=fontsize)
 
             # sigma
             ax2.barh(range(len(results_df)), results_df['sigma'],
                      alpha=0.7, color=colors[1])
             ax2.set_yticks(range(len(results_df)))
-            ax2.set_yticklabels(results_df['parameter'])
+            ax2.set_yticklabels(results_df['parameter'],fontsize=ticksize)
             ax2.set_xlabel('Standard Deviation')
-            ax2.set_title('Parameter Interactions/Non-linearity')
+            ax2.set_title('Parameter Interactions/Non-linearity',fontsize=fontsize)
         except FileNotFoundError:
             print(f"Results not found for {network_type} - {metric} - {agent_type}")
 
-    plt.suptitle(f'Sensitivity Analysis - {network_type.capitalize()} Network - {metric} of {agent_types[0]}')
+    plt.suptitle(f'Sensitivity Analysis - {network_type.capitalize()} Network - {metric} of {agent_types[0]}', fontsize=ticksize)
     plt.tight_layout()
 
     if save:
@@ -154,14 +155,14 @@ def plot_network_comparison(metric, network_types=['cycle', 'wheel', 'complete',
     # agent_palette = {'ScientistAgent': colors[0], 'SuperScientistAgent': colors[1]}
     sns.barplot(data=combined_df, x='mu_star', y='parameter',
                 hue='network_type', ax=ax1, palette=palette)
-    ax1.set_xlabel('Mean Absolute Elementary Effect')
-    ax1.set_title('Parameter Importance Across Network Types')
+    ax1.set_xlabel('Mean Absolute Elementary Effect',fontsize=fontsize)
+    ax1.set_title('Parameter Importance Across Network Types',fontsize=fontsize)
 
     # sigma comparison
     sns.barplot(data=combined_df, x='sigma', y='parameter',
                 hue='network_type', ax=ax2, palette=palette)
-    ax2.set_xlabel('Standard Deviation')
-    ax2.set_title('Parameter Interactions Across Network Types')
+    ax2.set_xlabel('Standard Deviation',fontsize=fontsize)
+    ax2.set_title('Parameter Interactions Across Network Types',fontsize=fontsize)
 
     plt.suptitle(f'Complete Comparison - {metric} of {agent_types[0]}')
     plt.tight_layout()
@@ -220,3 +221,94 @@ def plot_all_comparisons(timestamp=None, num_trajectories=None):
 
     for metric in all_metrics:
         plot_network_comparison(metric, timestamp=timestamp, num_trajectories=num_trajectories)
+
+def create_summary_table(network_types=['cycle', 'wheel', 'complete', 'bipartite', 'cliques'], 
+                        metrics=['convergence_time', 'correct_theory_rate', 'old_theory_rate'],
+                        timestamp=None, num_trajectories=None):
+    """
+    Create a simple summary table showing top parameters for each network-metric combination
+    """
+    summary_data = []
+    
+    for network_type in network_types:
+        for metric in metrics:
+            try:
+                # Use your existing function
+                results_df = load_sensitivity_results(network_type, metric, timestamp)
+                
+                # Get top 3 parameters by mu_star
+                top_3 = results_df.nlargest(3, 'mu_star')
+                
+                # Format the data
+                top_params = []
+                for i, (_, row) in enumerate(top_3.iterrows()):
+                    top_params.append(f"{row['parameter']} ({row['mu_star']:.3f})")
+                
+                # Pad with empty strings if less than 3 parameters
+                while len(top_params) < 3:
+                    top_params.append("-")
+                
+                summary_data.append({
+                    'Network': network_type.capitalize(),
+                    'Metric': metric.replace('_', ' ').title(),
+                    '1st Most Important': top_params[0],
+                    '2nd Most Important': top_params[1],
+                    '3rd Most Important': top_params[2]
+                })
+                
+            except FileNotFoundError:
+                print(f"Results not found for {network_type} - {metric}")
+                summary_data.append({
+                    'Network': network_type.capitalize(),
+                    'Metric': metric.replace('_', ' ').title(),
+                    '1st Most Important': "No data",
+                    '2nd Most Important': "No data",
+                    '3rd Most Important': "No data"
+                })
+    
+    summary_df = pd.DataFrame(summary_data)
+    return summary_df
+
+def save_summary_table_latex(summary_df, filename="sensitivity_summary_table.tex"):
+    """
+    Save the summary table as LaTeX
+    """
+    latex_code = summary_df.to_latex(
+        index=False,
+        caption="Top three most important parameters by network type and metric (mu* values in parentheses)",
+        label="tab:sensitivity_summary",
+        escape=False,
+        column_format='llp{3cm}p{3cm}p{3cm}'  # Better column formatting for long parameter names
+    )
+    
+    os.makedirs("analysis_results", exist_ok=True)
+    filepath = f"analysis_results/{filename}"
+    
+    with open(filepath, "w", encoding='utf-8') as f:
+        f.write(latex_code)
+    
+    print(f"LaTeX table saved to: {filepath}")
+    return filepath
+
+# Simple usage with your existing code:
+def generate_simple_summary(num_trajectories=None):
+    """
+    Generate and save a simple summary table using your existing functions
+    """
+    # Create the summary table
+    summary_table = create_summary_table(num_trajectories=num_trajectories)
+    
+    # Display it
+    print("Sensitivity Analysis Summary:")
+    print("=" * 80)
+    print(summary_table.to_string(index=False))
+    
+    # Save as LaTeX
+    latex_file = save_summary_table_latex(summary_table)
+    
+    # Also save as CSV for reference
+    csv_file = "analysis_results/sensitivity_summary_table.csv"
+    summary_table.to_csv(csv_file, index=False)
+    print(f"CSV table saved to: {csv_file}")
+    
+    return summary_table
